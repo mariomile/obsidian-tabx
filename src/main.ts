@@ -42,6 +42,10 @@ export default class TabxPlugin extends Plugin {
             this.settings.presentation = presentation;
             await this.saveSettings();
           },
+          async (sort) => {
+            this.settings.sort = sort;
+            await this.saveSettings();
+          },
         ),
     );
 

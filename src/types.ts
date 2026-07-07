@@ -1,5 +1,6 @@
 import type { WorkspaceLeaf } from 'obsidian';
 import type { Presentation } from './presentation.ts';
+import type { GridSort } from './grid-filter.ts';
 
 export interface TabxSettings {
   autoHide: boolean;
@@ -10,6 +11,7 @@ export interface TabxSettings {
   previewCharacters: number;
   presentation: Presentation;
   tabBarButton: boolean;
+  sort: GridSort;
 }
 
 export interface TabEntry {

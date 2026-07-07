@@ -1,8 +1,14 @@
-import { ItemView, TFile, setIcon, type WorkspaceLeaf } from 'obsidian';
+import { ItemView, Menu, TFile, setIcon, type WorkspaceLeaf } from 'obsidian';
 
 import { buildTabCard } from './card-model.ts';
 import { classifyTag, formatRelativeDate } from './card-format.ts';
 import { collectTabs } from './tab-source.ts';
+import {
+  GRID_SORTS,
+  matchesQuery,
+  sortCards,
+  type GridSort,
+} from './grid-filter.ts';
 import { leafId } from './obsidian-internals.ts';
 import {
   PRESENTATIONS,
@@ -30,7 +36,12 @@ export class GridView extends ItemView {
   private observer: IntersectionObserver | null = null;
   private renderEpoch = 0;
   private debounce: number | null = null;
+  private searchTimer: number | null = null;
   private presentation: Presentation = 'editorial';
+  private sort: GridSort = 'tab-order';
+  private query = '';
+  private allCards: TabCard[] = [];
+  private sortButton: HTMLButtonElement | null = null;
   private readonly densityButtons = new Map<Presentation, HTMLButtonElement>();
 
   constructor(
@@ -40,6 +51,7 @@ export class GridView extends ItemView {
     private readonly onPresentationChange: (
       presentation: Presentation,
     ) => Promise<void>,
+    private readonly onSortChange: (sort: GridSort) => Promise<void>,
   ) {
     super(leaf);
   }
@@ -60,6 +72,7 @@ export class GridView extends ItemView {
     this.contentEl.empty();
     this.contentEl.addClass('tabx-grid-content');
     this.presentation = this.getSettings().presentation;
+    this.sort = this.getSettings().sort;
     this.buildHeader();
     this.gridEl = this.contentEl.createDiv({ cls: 'tabx-grid' });
     this.applyPresentation(this.presentation);
@@ -109,6 +122,7 @@ export class GridView extends ItemView {
 
   async onClose(): Promise<void> {
     if (this.debounce !== null) window.clearTimeout(this.debounce);
+    if (this.searchTimer !== null) window.clearTimeout(this.searchTimer);
     this.observer?.disconnect();
     this.observer = null;
   }
@@ -116,13 +130,49 @@ export class GridView extends ItemView {
   /** Public entry point for settings-driven refresh. */
   reload(): void {
     this.presentation = this.getSettings().presentation;
+    this.sort = this.getSettings().sort;
     this.applyPresentation(this.presentation);
+    this.updateSortLabel();
     this.rebuild();
   }
 
   private buildHeader(): void {
     const header = this.contentEl.createDiv({ cls: 'tabx-grid-header' });
-    const density = header.createDiv({
+
+    const searchWrap = header.createDiv({ cls: 'tabx-search' });
+    const searchIcon = searchWrap.createSpan({
+      cls: 'tabx-search-icon',
+      attr: { 'aria-hidden': 'true' },
+    });
+    setIcon(searchIcon, 'search');
+    const search = searchWrap.createEl('input', {
+      cls: 'tabx-search-input',
+      type: 'search',
+      placeholder: 'Search tabs…',
+      attr: { 'aria-label': 'Search tabs' },
+    });
+    this.registerDomEvent(search, 'input', () => {
+      if (this.searchTimer !== null) window.clearTimeout(this.searchTimer);
+      this.searchTimer = window.setTimeout(() => {
+        this.searchTimer = null;
+        this.query = search.value;
+        this.renderCards();
+      }, 120);
+    });
+
+    const controls = header.createDiv({ cls: 'tabx-grid-controls' });
+
+    this.sortButton = controls.createEl('button', {
+      cls: 'clickable-icon tabx-sort-button',
+      attr: { type: 'button', 'aria-label': 'Sort tabs' },
+    });
+    setIcon(this.sortButton, 'arrow-up-down');
+    this.updateSortLabel();
+    this.registerDomEvent(this.sortButton, 'click', (event) => {
+      this.openSortMenu(event);
+    });
+
+    const density = controls.createDiv({
       cls: 'tabx-density',
       attr: { role: 'group', 'aria-label': 'Card density' },
     });
@@ -161,8 +211,39 @@ export class GridView extends ItemView {
     if (mode === this.presentation) return;
     this.presentation = mode;
     this.applyPresentation(mode);
-    this.rebuild();
+    this.renderCards();
     await this.onPresentationChange(mode);
+  }
+
+  private updateSortLabel(): void {
+    const label =
+      GRID_SORTS.find((option) => option.value === this.sort)?.label ??
+      'Sort tabs';
+    this.sortButton?.setAttribute('aria-label', `Sort: ${label}`);
+    this.sortButton?.setAttribute('title', `Sort: ${label}`);
+  }
+
+  private openSortMenu(event: MouseEvent): void {
+    const menu = new Menu();
+    for (const option of GRID_SORTS) {
+      menu.addItem((item) => {
+        item
+          .setTitle(option.label)
+          .setChecked(option.value === this.sort)
+          .onClick(() => {
+            void this.setSort(option.value);
+          });
+      });
+    }
+    menu.showAtMouseEvent(event);
+  }
+
+  private async setSort(sort: GridSort): Promise<void> {
+    if (sort === this.sort) return;
+    this.sort = sort;
+    this.updateSortLabel();
+    this.renderCards();
+    await this.onSortChange(sort);
   }
 
   private queueRebuild(): void {
@@ -173,14 +254,43 @@ export class GridView extends ItemView {
     }, 50);
   }
 
+  /** Re-collect the open tabs, then filter/sort/render them. */
   private rebuild(): void {
+    this.allCards = collectTabs(this.app).map((entry) =>
+      buildTabCard(this.app, entry),
+    );
+    this.renderCards();
+  }
+
+  /** Render the current cards through the active query + sort (no re-collect). */
+  private renderCards(): void {
     this.renderEpoch += 1;
     this.gridEl.empty();
     const showPreview = this.getSettings().showTabPreview;
     const now = Date.now();
-    for (const entry of collectTabs(this.app)) {
-      this.renderCard(buildTabCard(this.app, entry), showPreview, now);
+    const visible = sortCards(
+      this.allCards.filter((card) => matchesQuery(card, this.query)),
+      this.sort,
+    );
+    if (visible.length === 0) {
+      this.renderEmpty();
+      return;
     }
+    for (const card of visible) this.renderCard(card, showPreview, now);
+  }
+
+  private renderEmpty(): void {
+    const empty = this.gridEl.createDiv({ cls: 'tabx-grid-empty' });
+    const icon = empty.createSpan({
+      cls: 'tabx-grid-empty-icon',
+      attr: { 'aria-hidden': 'true' },
+    });
+    setIcon(icon, 'search-x');
+    empty.createEl('p', {
+      text: this.query
+        ? 'No open tabs match your search.'
+        : 'No open tabs.',
+    });
   }
 
   private renderCard(card: TabCard, showPreview: boolean, now: number): void {

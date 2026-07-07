@@ -1,4 +1,5 @@
 import { resolvePresentation } from './presentation.ts';
+import { resolveSort } from './grid-filter.ts';
 import type { TabxSettings } from './types.ts';
 
 export const DEFAULT_SETTINGS: TabxSettings = {
@@ -10,6 +11,7 @@ export const DEFAULT_SETTINGS: TabxSettings = {
   previewCharacters: 240,
   presentation: 'editorial',
   tabBarButton: true,
+  sort: 'tab-order',
 };
 
 function bool(value: unknown, fallback: boolean): boolean {
@@ -52,5 +54,6 @@ export function parseSettings(raw: unknown): TabxSettings {
       DEFAULT_SETTINGS.presentation,
     ),
     tabBarButton: bool(data.tabBarButton, DEFAULT_SETTINGS.tabBarButton),
+    sort: resolveSort(data.sort, DEFAULT_SETTINGS.sort),
   };
 }

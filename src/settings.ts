@@ -2,6 +2,7 @@ import { PluginSettingTab, Setting, type App } from 'obsidian';
 
 import type TabxPlugin from './main.ts';
 import { resolvePresentation } from './presentation.ts';
+import { GRID_SORTS, resolveSort } from './grid-filter.ts';
 
 export { DEFAULT_SETTINGS, parseSettings } from './settings-data.ts';
 
@@ -110,6 +111,22 @@ export class TabxSettingTab extends PluginSettingTab {
             this.plugin.refreshGrids();
           }),
       );
+
+    new Setting(containerEl)
+      .setName('Default sort')
+      .setDesc('Initial sort order for the tab grid.')
+      .addDropdown((dropdown) => {
+        for (const option of GRID_SORTS) {
+          dropdown.addOption(option.value, option.label);
+        }
+        dropdown
+          .setValue(this.plugin.settings.sort)
+          .onChange(async (value) => {
+            this.plugin.settings.sort = resolveSort(value);
+            await this.plugin.saveSettings();
+            this.plugin.refreshGrids();
+          });
+      });
 
     new Setting(containerEl)
       .setName('Show card previews')
