@@ -536,15 +536,35 @@
   }
 }
 
-/* ------------------------------------------------------------ Hot-zone --- */
+/* ------------------------------------------------ Auto-hide tab bar --- */
+/* Hide the horizontal note tab bar; reveal on hover. The header is lifted out
+   of flow (absolute) so the editor reclaims the space, and a thin sliver stays
+   as the hover target. Main editor area (.mod-root) only. */
 
-.tabx-hotzone {
-  position: fixed;
-  z-index: var(--layer-sidedock, 10);
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 8px;
+body.tabx-autohide-tabs .mod-root .workspace-tabs {
+  position: relative;
+}
+
+body.tabx-autohide-tabs
+  .mod-root
+  .workspace-tabs
+  > .workspace-tab-header-container {
+  position: absolute;
+  z-index: 15;
+  inset: 0 0 auto 0;
+  max-height: 5px;
+  overflow: hidden;
+  background: var(--background-primary);
+  transition: max-height 160ms var(--tabx-ease);
+}
+
+body.tabx-autohide-tabs
+  .mod-root
+  .workspace-tabs
+  > .workspace-tab-header-container:hover {
+  max-height: 400px;
+  overflow: visible;
+  box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.35);
 }
 
 /* ---------------------------------------------------- Scrolling tab bar --- */

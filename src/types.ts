@@ -4,7 +4,6 @@ import type { GridSort } from './grid-filter.ts';
 
 export interface TabxSettings {
   autoHide: boolean;
-  autoHideDelay: number;
   scrollTabBar: boolean;
   minTabWidth: number;
   showTabPreview: boolean;

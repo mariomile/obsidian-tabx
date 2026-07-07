@@ -4,7 +4,6 @@ import type { TabxSettings } from './types.ts';
 
 export const DEFAULT_SETTINGS: TabxSettings = {
   autoHide: false,
-  autoHideDelay: 250,
   scrollTabBar: true,
   minTabWidth: 120,
   showTabPreview: true,
@@ -34,12 +33,6 @@ export function parseSettings(raw: unknown): TabxSettings {
   ) as Record<string, unknown>;
   return {
     autoHide: bool(data.autoHide, DEFAULT_SETTINGS.autoHide),
-    autoHideDelay: clampInt(
-      data.autoHideDelay,
-      DEFAULT_SETTINGS.autoHideDelay,
-      0,
-      3000,
-    ),
     scrollTabBar: bool(data.scrollTabBar, DEFAULT_SETTINGS.scrollTabBar),
     minTabWidth: clampInt(data.minTabWidth, DEFAULT_SETTINGS.minTabWidth, 60, 400),
     showTabPreview: bool(data.showTabPreview, DEFAULT_SETTINGS.showTabPreview),

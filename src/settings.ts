@@ -18,12 +18,12 @@ export class TabxSettingTab extends PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
 
-    new Setting(containerEl).setName('Sidebar').setHeading();
+    new Setting(containerEl).setName('Tab bar').setHeading();
 
     new Setting(containerEl)
-      .setName('Auto-hide left sidebar')
+      .setName('Auto-hide tab bar')
       .setDesc(
-        'Collapse the left sidebar and reveal it on hover at the screen edge. Note: this hides the entire left sidebar, not just the tab rail.',
+        'Hide the horizontal note tab bar and reveal it on hover at the top of the pane.',
       )
       .addToggle((toggle) =>
         toggle.setValue(this.plugin.settings.autoHide).onChange(async (value) => {
@@ -32,22 +32,6 @@ export class TabxSettingTab extends PluginSettingTab {
           this.plugin.applyAutoHide();
         }),
       );
-
-    new Setting(containerEl)
-      .setName('Auto-hide delay')
-      .setDesc('Milliseconds to wait before collapsing after leaving the sidebar.')
-      .addSlider((slider) =>
-        slider
-          .setLimits(0, 1500, 50)
-          .setValue(this.plugin.settings.autoHideDelay)
-          .setDynamicTooltip()
-          .onChange(async (value) => {
-            this.plugin.settings.autoHideDelay = value;
-            await this.plugin.saveSettings();
-          }),
-      );
-
-    new Setting(containerEl).setName('Tab bar').setHeading();
 
     new Setting(containerEl)
       .setName('Scrolling horizontal tab bar')

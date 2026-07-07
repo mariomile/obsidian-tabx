@@ -18,7 +18,7 @@ test('parseSettings clamps out-of-range numbers', () => {
   assert.equal(parseSettings({ previewCharacters: 5 }).previewCharacters, 40);
   assert.equal(parseSettings({ previewCharacters: 9999 }).previewCharacters, 2000);
   assert.equal(parseSettings({ minTabWidth: 10 }).minTabWidth, 60);
-  assert.equal(parseSettings({ autoHideDelay: -5 }).autoHideDelay, 0);
+  assert.equal(parseSettings({ minTabWidth: 9999 }).minTabWidth, 400);
 });
 
 test('parseSettings ignores wrong types', () => {

@@ -1,4 +1,4 @@
-import type { App, WorkspaceLeaf } from 'obsidian';
+import type { WorkspaceLeaf } from 'obsidian';
 
 /**
  * Typed accessors for Obsidian internals that are not part of the public
@@ -8,19 +8,6 @@ import type { App, WorkspaceLeaf } from 'obsidian';
 
 interface LeafInternals {
   id?: string;
-}
-
-interface SplitInternals {
-  containerEl?: HTMLElement;
-  expand?: () => void;
-  collapse?: () => void;
-  collapsed?: boolean;
-}
-
-export interface LeftSplitHandle {
-  expand(): void;
-  collapse(): void;
-  readonly collapsed: boolean;
 }
 
 const mintedIds = new WeakMap<WorkspaceLeaf, string>();
@@ -37,27 +24,4 @@ export function leafId(leaf: WorkspaceLeaf): string {
     mintedIds.set(leaf, minted);
   }
   return minted;
-}
-
-export function leftSplit(app: App): LeftSplitHandle | null {
-  const split = app.workspace.leftSplit as unknown as SplitInternals;
-  if (
-    !split ||
-    typeof split.expand !== 'function' ||
-    typeof split.collapse !== 'function'
-  ) {
-    return null;
-  }
-  return {
-    expand: () => split.expand?.(),
-    collapse: () => split.collapse?.(),
-    get collapsed() {
-      return Boolean(split.collapsed);
-    },
-  };
-}
-
-export function leftSidedockEl(app: App): HTMLElement | null {
-  const split = app.workspace.leftSplit as unknown as SplitInternals;
-  return split?.containerEl instanceof HTMLElement ? split.containerEl : null;
 }

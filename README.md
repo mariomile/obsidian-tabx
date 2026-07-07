@@ -18,8 +18,8 @@ Sonar…).
   and **sort** (tab order, recently modified, title) from the header, plus
   three densities (compact / editorial / visual). Open it from the rail header,
   the button in the main tab bar, or the command.
-- **Auto-hide** — collapse the left sidebar and reveal it by moving the cursor
-  to the screen edge. Off by default.
+- **Auto-hide** — hide the horizontal note tab bar and reveal it on hover at
+  the top of the pane, reclaiming vertical space. Off by default.
 - **Scrolling tab bar** — let the native top tab bar scroll horizontally
   instead of shrinking each tab to an unreadable sliver. On by default.
 
@@ -36,8 +36,7 @@ Sonar…).
 
 | Setting | Default | What it does |
 |---|---|---|
-| Auto-hide left sidebar | off | Collapse the sidebar; reveal on hover at the edge. |
-| Auto-hide delay | 250 ms | Wait before collapsing after leaving the sidebar. |
+| Auto-hide tab bar | off | Hide the horizontal note tab bar; reveal on hover at the top. |
 | Scrolling horizontal tab bar | on | Native tab bar scrolls instead of shrinking tabs. |
 | Minimum tab width | 120 px | Width each tab keeps before the bar scrolls. |
 | Tab grid button in tab bar | on | Inject an "open tab grid" button next to the native "+". |
@@ -46,14 +45,11 @@ Sonar…).
 | Show card previews | on | Load a short excerpt on each grid card. |
 | Preview length | 240 | Max characters per card excerpt. |
 
-> **Note on auto-hide:** it collapses the **entire** left sidebar, so File
-> Explorer / Search hide together with the rail. That is why it ships off.
-
 ## Commands
 
 - **Open tab rail** (also a ribbon icon)
 - **Open tab grid**
-- **Toggle sidebar auto-hide**
+- **Toggle tab bar auto-hide**
 
 ## Performance
 

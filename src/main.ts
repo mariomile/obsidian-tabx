@@ -1,6 +1,5 @@
 import { Plugin } from 'obsidian';
 
-import { AutoHideController } from './autohide.ts';
 import { GridView, TABX_GRID_VIEW_TYPE } from './grid-view.ts';
 import { RailView, TABX_RAIL_VIEW_TYPE } from './rail-view.ts';
 import { TabPreviewService } from './preview.ts';
@@ -11,13 +10,11 @@ import type { TabxSettings } from './types.ts';
 export default class TabxPlugin extends Plugin {
   settings: TabxSettings = { ...DEFAULT_SETTINGS };
   previewService!: TabPreviewService;
-  private autoHide!: AutoHideController;
   private tabBarButton!: TabBarButtonManager;
 
   async onload(): Promise<void> {
     this.settings = parseSettings(await this.loadData());
     this.previewService = new TabPreviewService(this.app);
-    this.autoHide = new AutoHideController(this.app, () => this.settings);
     this.tabBarButton = new TabBarButtonManager(this.app, () =>
       void this.openGrid(),
     );
@@ -64,7 +61,7 @@ export default class TabxPlugin extends Plugin {
     });
     this.addCommand({
       id: 'toggle-autohide',
-      name: 'Toggle sidebar auto-hide',
+      name: 'Toggle tab bar auto-hide',
       callback: () => {
         void this.toggleAutoHide();
       },
@@ -73,19 +70,17 @@ export default class TabxPlugin extends Plugin {
     this.addSettingTab(new TabxSettingTab(this.app, this));
 
     this.applyTabBarStyle();
+    this.applyAutoHide();
     this.registerEvent(
       this.app.workspace.on('layout-change', () => this.applyTabBarButton()),
     );
-    this.app.workspace.onLayoutReady(() => {
-      this.applyAutoHide();
-      this.applyTabBarButton();
-    });
+    this.app.workspace.onLayoutReady(() => this.applyTabBarButton());
   }
 
   onunload(): void {
-    this.autoHide.disable();
     this.tabBarButton.unmount();
     document.body.removeClass('tabx-scroll-tabs');
+    document.body.removeClass('tabx-autohide-tabs');
     document.body.style.removeProperty('--tabx-min-tab-width');
     this.previewService.invalidate();
   }
@@ -103,8 +98,7 @@ export default class TabxPlugin extends Plugin {
   }
 
   applyAutoHide(): void {
-    if (this.settings.autoHide) this.autoHide.enable();
-    else this.autoHide.disable();
+    document.body.toggleClass('tabx-autohide-tabs', this.settings.autoHide);
   }
 
   applyTabBarButton(): void {
