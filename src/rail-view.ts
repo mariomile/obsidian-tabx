@@ -54,8 +54,16 @@ export class RailView extends ItemView implements HoverParent {
     const header = root.createDiv({ cls: 'tabx-rail-header' });
     header.createSpan({ cls: 'tabx-rail-title', text: 'Open tabs' });
     this.countEl = header.createSpan({ cls: 'tabx-rail-count' });
+
+    const newTabButton = header.createEl('button', {
+      cls: 'clickable-icon tabx-rail-action tabx-new-tab',
+      attr: { type: 'button', 'aria-label': 'New tab' },
+    });
+    setIcon(newTabButton, 'plus');
+    this.registerDomEvent(newTabButton, 'click', () => this.newTab());
+
     const gridButton = header.createEl('button', {
-      cls: 'clickable-icon tabx-grid-open',
+      cls: 'clickable-icon tabx-rail-action tabx-grid-open',
       attr: { type: 'button', 'aria-label': 'Open tab grid' },
     });
     setIcon(gridButton, 'layout-grid');
@@ -231,6 +239,11 @@ export class RailView extends ItemView implements HoverParent {
   private activateTab(entry: TabEntry): void {
     this.app.workspace.setActiveLeaf(entry.leaf, { focus: true });
     void this.app.workspace.revealLeaf(entry.leaf);
+  }
+
+  private newTab(): void {
+    const leaf = this.app.workspace.getLeaf('tab');
+    this.app.workspace.setActiveLeaf(leaf, { focus: true });
   }
 
   private closeTab(entry: TabEntry): void {

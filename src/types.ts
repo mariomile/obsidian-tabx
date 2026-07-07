@@ -21,5 +21,14 @@ export interface TabEntry {
 
 export interface TabPreview {
   excerpt: string;
+  imageUrls: string[];
   empty: boolean;
+}
+
+/** Synchronous, file-derived metadata for a grid card (tags, folder, date). */
+export interface TabCard {
+  entry: TabEntry;
+  folder: string;
+  mtime: number | null;
+  tags: string[];
 }

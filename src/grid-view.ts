@@ -1,14 +1,11 @@
-import {
-  ItemView,
-  TFile,
-  setIcon,
-  type WorkspaceLeaf,
-} from 'obsidian';
+import { ItemView, TFile, setIcon, type WorkspaceLeaf } from 'obsidian';
 
+import { buildTabCard } from './card-model.ts';
+import { classifyTag, formatRelativeDate } from './card-format.ts';
 import { collectTabs } from './tab-source.ts';
 import { leafId } from './obsidian-internals.ts';
 import type { PreviewProvider } from './preview.ts';
-import type { TabEntry, TabxSettings } from './types.ts';
+import type { TabCard, TabxSettings } from './types.ts';
 
 export const TABX_GRID_VIEW_TYPE = 'tabx-grid';
 
@@ -55,12 +52,8 @@ export class GridView extends ItemView {
     );
     this.register(() => this.observer?.disconnect());
 
-    this.registerDomEvent(this.gridEl, 'click', (event) =>
-      this.onClick(event),
-    );
-    this.registerDomEvent(this.gridEl, 'auxclick', (event) =>
-      this.onAux(event),
-    );
+    this.registerDomEvent(this.gridEl, 'click', (event) => this.onClick(event));
+    this.registerDomEvent(this.gridEl, 'auxclick', (event) => this.onAux(event));
     this.registerDomEvent(this.gridEl, 'keydown', (event) => this.onKey(event));
 
     this.registerEvent(
@@ -112,13 +105,16 @@ export class GridView extends ItemView {
   private rebuild(): void {
     this.renderEpoch += 1;
     this.gridEl.empty();
-    const entries = collectTabs(this.app);
     const showPreview = this.getSettings().showTabPreview;
-    for (const entry of entries) this.renderCard(entry, showPreview);
+    const now = Date.now();
+    for (const entry of collectTabs(this.app)) {
+      this.renderCard(buildTabCard(this.app, entry), showPreview, now);
+    }
   }
 
-  private renderCard(entry: TabEntry, showPreview: boolean): void {
-    const card = this.gridEl.createEl('article', {
+  private renderCard(card: TabCard, showPreview: boolean, now: number): void {
+    const { entry } = card;
+    const cardEl = this.gridEl.createEl('article', {
       cls: 'tabx-card',
       attr: {
         'data-leaf-id': entry.id,
@@ -127,15 +123,17 @@ export class GridView extends ItemView {
         'aria-label': `Activate ${entry.title}`,
       },
     });
-    card.toggleClass('is-active', entry.active);
+    cardEl.toggleClass('is-active', entry.active);
 
-    const closeButton = card.createEl('button', {
+    const closeButton = cardEl.createEl('button', {
       cls: 'clickable-icon tabx-card-close',
       attr: { type: 'button', 'aria-label': `Close ${entry.title}` },
     });
     setIcon(closeButton, 'x');
 
-    const head = card.createDiv({ cls: 'tabx-card-head' });
+    const body = cardEl.createDiv({ cls: 'tabx-card-body' });
+
+    const head = body.createDiv({ cls: 'tabx-card-head' });
     const iconEl = head.createSpan({
       cls: 'tabx-card-icon',
       attr: { 'aria-hidden': 'true' },
@@ -147,11 +145,32 @@ export class GridView extends ItemView {
     });
     titleEl.setAttribute('title', entry.title);
 
-    const folder = folderOf(entry.filePath);
-    if (folder) card.createDiv({ cls: 'tabx-card-meta', text: folder });
+    if (card.folder || card.mtime !== null) {
+      const meta = body.createDiv({ cls: 'tabx-card-meta' });
+      if (card.folder) {
+        meta.createSpan({ cls: 'tabx-card-folder', text: card.folder });
+      }
+      if (card.mtime !== null) {
+        meta.createSpan({
+          cls: 'tabx-card-date',
+          text: formatRelativeDate(card.mtime, now),
+        });
+      }
+    }
+
+    if (card.tags.length > 0) {
+      const tagsEl = body.createDiv({ cls: 'tabx-card-tags' });
+      for (const tag of card.tags.slice(0, 4)) {
+        tagsEl.createSpan({
+          cls: 'tabx-tag-chip',
+          text: `#${tag}`,
+          attr: { 'data-tag-kind': classifyTag(tag) },
+        });
+      }
+    }
 
     if (showPreview && entry.filePath) {
-      const host = card.createDiv({
+      const host = cardEl.createDiv({
         cls: 'tabx-preview-host is-loading',
         attr: {
           'data-file': entry.filePath,
@@ -181,10 +200,13 @@ export class GridView extends ItemView {
       }
       host.empty();
       host.removeClass('is-loading');
-      if (preview.empty) {
-        host.createDiv({ cls: 'tabx-card-empty', text: 'Empty note' });
-      } else {
+      if (preview.imageUrls.length > 0) {
+        this.renderImage(host, preview.imageUrls[0]);
+      }
+      if (preview.excerpt) {
         host.createDiv({ cls: 'tabx-card-preview', text: preview.excerpt });
+      } else if (preview.imageUrls.length === 0) {
+        host.createDiv({ cls: 'tabx-card-empty', text: 'Empty note' });
       }
     } catch (error) {
       if (!host.isConnected) return;
@@ -195,52 +217,61 @@ export class GridView extends ItemView {
     }
   }
 
+  private renderImage(host: HTMLElement, url: string | undefined): void {
+    if (!url) return;
+    const img = host.createEl('img', {
+      cls: 'tabx-card-image',
+      attr: { alt: '', loading: 'lazy', decoding: 'async', src: url },
+    });
+    img.addEventListener('error', () => img.remove(), { once: true });
+  }
+
   private updateActive(): void {
     const activeLeaf = this.app.workspace.getMostRecentLeaf(
       this.app.workspace.rootSplit,
     );
     const activeId = activeLeaf ? leafId(activeLeaf) : null;
-    for (const card of Array.from(
+    for (const cardEl of Array.from(
       this.gridEl.querySelectorAll<HTMLElement>('.tabx-card'),
     )) {
-      card.toggleClass('is-active', card.dataset.leafId === activeId);
+      cardEl.toggleClass('is-active', cardEl.dataset.leafId === activeId);
     }
   }
 
-  private cardEntry(event: Event): { leaf: WorkspaceLeaf } | null {
+  private cardLeaf(event: Event): WorkspaceLeaf | null {
     const target = event.target;
     if (!(target instanceof Element)) return null;
-    const card = target.closest<HTMLElement>('.tabx-card');
-    const id = card?.dataset.leafId;
+    const cardEl = target.closest<HTMLElement>('.tabx-card');
+    const id = cardEl?.dataset.leafId;
     if (!id) return null;
     let found: WorkspaceLeaf | null = null;
     this.app.workspace.iterateRootLeaves((leaf) => {
       if (leafId(leaf) === id) found = leaf;
     });
-    return found ? { leaf: found } : null;
+    return found;
   }
 
   private onClick(event: MouseEvent): void {
     const target = event.target;
     if (target instanceof Element && target.closest('.tabx-card-close')) {
-      const hit = this.cardEntry(event);
-      if (hit) {
+      const leaf = this.cardLeaf(event);
+      if (leaf) {
         event.preventDefault();
-        hit.leaf.detach();
+        leaf.detach();
         this.rebuild();
       }
       return;
     }
-    const hit = this.cardEntry(event);
-    if (hit) this.activate(hit.leaf);
+    const leaf = this.cardLeaf(event);
+    if (leaf) this.activate(leaf);
   }
 
   private onAux(event: MouseEvent): void {
     if (event.button !== 1) return;
-    const hit = this.cardEntry(event);
-    if (!hit) return;
+    const leaf = this.cardLeaf(event);
+    if (!leaf) return;
     event.preventDefault();
-    hit.leaf.detach();
+    leaf.detach();
     this.rebuild();
   }
 
@@ -250,20 +281,14 @@ export class GridView extends ItemView {
     if (!(target instanceof HTMLElement) || !target.matches('.tabx-card')) {
       return;
     }
-    const hit = this.cardEntry(event);
-    if (!hit) return;
+    const leaf = this.cardLeaf(event);
+    if (!leaf) return;
     event.preventDefault();
-    this.activate(hit.leaf);
+    this.activate(leaf);
   }
 
   private activate(leaf: WorkspaceLeaf): void {
     this.app.workspace.setActiveLeaf(leaf, { focus: true });
     void this.app.workspace.revealLeaf(leaf);
   }
-}
-
-function folderOf(filePath: string | null): string {
-  if (!filePath) return '';
-  const slash = filePath.lastIndexOf('/');
-  return slash > 0 ? filePath.slice(0, slash) : '';
 }
