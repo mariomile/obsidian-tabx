@@ -4,6 +4,8 @@
 :root {
   --tabx-ease: cubic-bezier(0.25, 1, 0.5, 1);
   --tabx-radius: 9px;
+  /* Grace period before the auto-hidden tab bar collapses again on mouse-out. */
+  --tabx-autohide-delay: 450ms;
 }
 
 /* ---------------------------------------------------------------- Rail --- */
@@ -555,7 +557,9 @@ body.tabx-autohide-tabs
   min-height: 0;
   overflow: hidden;
   background: transparent;
-  transition: max-height 180ms var(--tabx-ease);
+  /* The collapse (revert to this state) waits out the tolerance delay; if the
+     cursor comes back within it, the bar never closes. */
+  transition: max-height 180ms var(--tabx-ease) var(--tabx-autohide-delay);
 }
 
 /* Fade the tab contents out while collapsed so no clipped text bleeds. */
@@ -565,14 +569,16 @@ body.tabx-autohide-tabs
   > .workspace-tab-header-container
   > * {
   opacity: 0;
-  transition: opacity 120ms var(--tabx-ease);
+  transition: opacity 120ms var(--tabx-ease) var(--tabx-autohide-delay);
 }
 
+/* Reveal immediately on hover (no delay); the delay only applies to closing. */
 body.tabx-autohide-tabs
   .mod-root
   .workspace-tabs
   > .workspace-tab-header-container:hover {
   max-height: 200px;
+  transition-delay: 0ms;
 }
 
 body.tabx-autohide-tabs
@@ -581,6 +587,7 @@ body.tabx-autohide-tabs
   > .workspace-tab-header-container:hover
   > * {
   opacity: 1;
+  transition-delay: 0ms;
 }
 
 /* ---------------------------------------------------- Scrolling tab bar --- */
