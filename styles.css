@@ -555,13 +555,14 @@
 body.tabx-scroll-tabs .mod-root .workspace-tab-header-container-inner {
   flex-wrap: nowrap;
   overflow-x: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none; /* keep the scroll, hide the bar */
 }
 
 body.tabx-scroll-tabs
   .mod-root
   .workspace-tab-header-container-inner::-webkit-scrollbar {
-  height: 4px;
+  height: 0;
+  display: none;
 }
 
 body.tabx-scroll-tabs .mod-root .workspace-tab-header {
