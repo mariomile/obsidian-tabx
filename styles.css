@@ -546,6 +546,12 @@ body.tabx-autohide-tabs .mod-root .workspace-tabs {
   position: relative;
 }
 
+/* Keep a small breathing gap at the top instead of jamming content to the
+   window edge; the collapsed handle lives inside it. */
+body.tabx-autohide-tabs .mod-root .workspace-tabs > .workspace-tab-container {
+  padding-top: var(--tabx-autohide-gap, 12px);
+}
+
 body.tabx-autohide-tabs
   .mod-root
   .workspace-tabs
