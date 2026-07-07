@@ -3,7 +3,12 @@ import { TFile } from 'obsidian';
 import type { TabPreview } from './types.ts';
 import { buildExcerpt } from './excerpt.ts';
 
-export class TabPreviewService {
+export interface PreviewProvider {
+  getPreview(filePath: string, maxChars: number): Promise<TabPreview>;
+  invalidate(path?: string): void;
+}
+
+export class TabPreviewService implements PreviewProvider {
   private readonly cache = new Map<string, TabPreview>();
 
   constructor(
