@@ -1,6 +1,7 @@
 import { PluginSettingTab, Setting, type App } from 'obsidian';
 
 import type TabxPlugin from './main.ts';
+import { resolvePresentation } from './presentation.ts';
 
 export { DEFAULT_SETTINGS, parseSettings } from './settings-data.ts';
 
@@ -78,6 +79,24 @@ export class TabxSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl).setName('Grid').setHeading();
+
+    new Setting(containerEl)
+      .setName('Default card density')
+      .setDesc('Initial layout for the tab grid.')
+      .addDropdown((dropdown) =>
+        dropdown
+          .addOptions({
+            compact: 'Compact',
+            editorial: 'Editorial',
+            visual: 'Visual',
+          })
+          .setValue(this.plugin.settings.presentation)
+          .onChange(async (value) => {
+            this.plugin.settings.presentation = resolvePresentation(value);
+            await this.plugin.saveSettings();
+            this.plugin.refreshGrids();
+          }),
+      );
 
     new Setting(containerEl)
       .setName('Show card previews')

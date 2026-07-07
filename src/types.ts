@@ -1,4 +1,5 @@
 import type { WorkspaceLeaf } from 'obsidian';
+import type { Presentation } from './presentation.ts';
 
 export interface TabxSettings {
   autoHide: boolean;
@@ -7,6 +8,7 @@ export interface TabxSettings {
   minTabWidth: number;
   showTabPreview: boolean;
   previewCharacters: number;
+  presentation: Presentation;
 }
 
 export interface TabEntry {

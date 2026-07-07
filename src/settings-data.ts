@@ -1,3 +1,4 @@
+import { resolvePresentation } from './presentation.ts';
 import type { TabxSettings } from './types.ts';
 
 export const DEFAULT_SETTINGS: TabxSettings = {
@@ -7,6 +8,7 @@ export const DEFAULT_SETTINGS: TabxSettings = {
   minTabWidth: 120,
   showTabPreview: true,
   previewCharacters: 240,
+  presentation: 'editorial',
 };
 
 function bool(value: unknown, fallback: boolean): boolean {
@@ -43,6 +45,10 @@ export function parseSettings(raw: unknown): TabxSettings {
       DEFAULT_SETTINGS.previewCharacters,
       40,
       2000,
+    ),
+    presentation: resolvePresentation(
+      data.presentation,
+      DEFAULT_SETTINGS.presentation,
     ),
   };
 }

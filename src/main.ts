@@ -29,7 +29,15 @@ export default class TabxPlugin extends Plugin {
     this.registerView(
       TABX_GRID_VIEW_TYPE,
       (leaf) =>
-        new GridView(leaf, () => this.settings, this.previewService),
+        new GridView(
+          leaf,
+          () => this.settings,
+          this.previewService,
+          async (presentation) => {
+            this.settings.presentation = presentation;
+            await this.saveSettings();
+          },
+        ),
     );
 
     this.addRibbonIcon('gallery-vertical', 'Open tab rail', () => {

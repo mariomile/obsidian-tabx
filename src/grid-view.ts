@@ -4,21 +4,42 @@ import { buildTabCard } from './card-model.ts';
 import { classifyTag, formatRelativeDate } from './card-format.ts';
 import { collectTabs } from './tab-source.ts';
 import { leafId } from './obsidian-internals.ts';
+import {
+  PRESENTATIONS,
+  PRESENTATION_ORDER,
+  type Presentation,
+} from './presentation.ts';
 import type { PreviewProvider } from './preview.ts';
 import type { TabCard, TabxSettings } from './types.ts';
 
 export const TABX_GRID_VIEW_TYPE = 'tabx-grid';
+
+const DENSITY_ICONS: Record<Presentation, string> = {
+  compact: 'grip',
+  editorial: 'layout-grid',
+  visual: 'panels-top-left',
+};
+const DENSITY_LABELS: Record<Presentation, string> = {
+  compact: 'Compact',
+  editorial: 'Editorial',
+  visual: 'Visual',
+};
 
 export class GridView extends ItemView {
   private gridEl!: HTMLElement;
   private observer: IntersectionObserver | null = null;
   private renderEpoch = 0;
   private debounce: number | null = null;
+  private presentation: Presentation = 'editorial';
+  private readonly densityButtons = new Map<Presentation, HTMLButtonElement>();
 
   constructor(
     leaf: WorkspaceLeaf,
     private readonly getSettings: () => TabxSettings,
     private readonly previews: PreviewProvider,
+    private readonly onPresentationChange: (
+      presentation: Presentation,
+    ) => Promise<void>,
   ) {
     super(leaf);
   }
@@ -38,7 +59,10 @@ export class GridView extends ItemView {
   async onOpen(): Promise<void> {
     this.contentEl.empty();
     this.contentEl.addClass('tabx-grid-content');
+    this.presentation = this.getSettings().presentation;
+    this.buildHeader();
     this.gridEl = this.contentEl.createDiv({ cls: 'tabx-grid' });
+    this.applyPresentation(this.presentation);
 
     this.observer = new IntersectionObserver(
       (entries) => {
@@ -91,7 +115,54 @@ export class GridView extends ItemView {
 
   /** Public entry point for settings-driven refresh. */
   reload(): void {
+    this.presentation = this.getSettings().presentation;
+    this.applyPresentation(this.presentation);
     this.rebuild();
+  }
+
+  private buildHeader(): void {
+    const header = this.contentEl.createDiv({ cls: 'tabx-grid-header' });
+    const density = header.createDiv({
+      cls: 'tabx-density',
+      attr: { role: 'group', 'aria-label': 'Card density' },
+    });
+    for (const mode of PRESENTATION_ORDER) {
+      const button = density.createEl('button', {
+        cls: 'clickable-icon tabx-density-button',
+        attr: {
+          type: 'button',
+          title: DENSITY_LABELS[mode],
+          'aria-label': DENSITY_LABELS[mode],
+          'aria-pressed': String(mode === this.presentation),
+        },
+      });
+      setIcon(button, DENSITY_ICONS[mode]);
+      this.registerDomEvent(button, 'click', () => {
+        void this.setPresentation(mode);
+      });
+      this.densityButtons.set(mode, button);
+    }
+  }
+
+  private applyPresentation(mode: Presentation): void {
+    const def = PRESENTATIONS[mode];
+    this.gridEl.dataset.presentation = mode;
+    this.gridEl.style.setProperty('--tabx-card-width', `${def.cardWidth}px`);
+    this.gridEl.style.setProperty(
+      '--tabx-excerpt-lines',
+      String(def.excerptLines),
+    );
+    for (const [value, button] of this.densityButtons) {
+      button.setAttribute('aria-pressed', String(value === mode));
+    }
+  }
+
+  private async setPresentation(mode: Presentation): Promise<void> {
+    if (mode === this.presentation) return;
+    this.presentation = mode;
+    this.applyPresentation(mode);
+    this.rebuild();
+    await this.onPresentationChange(mode);
   }
 
   private queueRebuild(): void {
