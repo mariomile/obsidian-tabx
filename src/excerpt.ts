@@ -1,6 +1,6 @@
 /** Turn raw Markdown into a plain, single-line excerpt for a card. */
 export function buildExcerpt(source: string, maxChars: number): string {
-  let text = source.replace(/^﻿/, '');
+  let text = source.replace(/^\uFEFF/, ''); // strip byte-order mark
   text = text.replace(/^---\n[\s\S]*?\n---\n?/, ''); // YAML frontmatter
   text = text
     .replace(/`{1,3}[^`]*`{1,3}/g, ' ') // code spans/fences
