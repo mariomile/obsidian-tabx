@@ -546,10 +546,10 @@ body.tabx-autohide-tabs .mod-root .workspace-tabs {
   position: relative;
 }
 
-/* Keep a small breathing gap at the top instead of jamming content to the
-   window edge; the collapsed handle lives inside it. */
-body.tabx-autohide-tabs .mod-root .workspace-tabs > .workspace-tab-container {
-  padding-top: var(--tabx-autohide-gap, 12px);
+/* Mirror the main area's existing bottom gap at the top, so the hidden tab bar
+   leaves the same breathing room above the pane as below it. */
+body.tabx-autohide-tabs .workspace-split.mod-root {
+  padding-top: var(--tabx-autohide-gap, 8px);
 }
 
 body.tabx-autohide-tabs
