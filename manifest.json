@@ -1,0 +1,9 @@
+{
+  "id": "tabx",
+  "name": "TabX",
+  "version": "0.1.0",
+  "minAppVersion": "1.12.7",
+  "description": "See your open tabs as a vertical rail and a Masonry-style grid.",
+  "author": "Mario Miletta",
+  "isDesktopOnly": false
+}
