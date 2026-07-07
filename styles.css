@@ -538,8 +538,9 @@
 
 /* ------------------------------------------------ Auto-hide tab bar --- */
 /* Hide the horizontal note tab bar; reveal on hover. The header is lifted out
-   of flow (absolute) so the editor reclaims the space, and a thin sliver stays
-   as the hover target. Main editor area (.mod-root) only. */
+   of flow (absolute) so the editor reclaims the space. Collapsed, it is a
+   clean 6px handle — the tab contents are faded out so no clipped tab text
+   bleeds over the view header. Main editor area (.mod-root) only. */
 
 body.tabx-autohide-tabs .mod-root .workspace-tabs {
   position: relative;
@@ -552,10 +553,20 @@ body.tabx-autohide-tabs
   position: absolute;
   z-index: 15;
   inset: 0 0 auto 0;
-  max-height: 5px;
+  max-height: 6px;
   overflow: hidden;
-  background: var(--background-primary);
+  background: var(--background-secondary);
   transition: max-height 160ms var(--tabx-ease);
+}
+
+/* Fade the tab contents out while collapsed so the handle stays clean. */
+body.tabx-autohide-tabs
+  .mod-root
+  .workspace-tabs
+  > .workspace-tab-header-container
+  > * {
+  opacity: 0;
+  transition: opacity 120ms var(--tabx-ease);
 }
 
 body.tabx-autohide-tabs
@@ -564,7 +575,16 @@ body.tabx-autohide-tabs
   > .workspace-tab-header-container:hover {
   max-height: 400px;
   overflow: visible;
+  background: var(--background-primary);
   box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.35);
+}
+
+body.tabx-autohide-tabs
+  .mod-root
+  .workspace-tabs
+  > .workspace-tab-header-container:hover
+  > * {
+  opacity: 1;
 }
 
 /* ---------------------------------------------------- Scrolling tab bar --- */
