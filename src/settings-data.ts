@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS: TabxSettings = {
   showTabPreview: true,
   previewCharacters: 240,
   presentation: 'editorial',
+  tabBarButton: true,
 };
 
 function bool(value: unknown, fallback: boolean): boolean {
@@ -50,5 +51,6 @@ export function parseSettings(raw: unknown): TabxSettings {
       data.presentation,
       DEFAULT_SETTINGS.presentation,
     ),
+    tabBarButton: bool(data.tabBarButton, DEFAULT_SETTINGS.tabBarButton),
   };
 }

@@ -4,6 +4,7 @@ import { AutoHideController } from './autohide.ts';
 import { GridView, TABX_GRID_VIEW_TYPE } from './grid-view.ts';
 import { RailView, TABX_RAIL_VIEW_TYPE } from './rail-view.ts';
 import { TabPreviewService } from './preview.ts';
+import { TabBarButtonManager } from './tabbar-button.ts';
 import { DEFAULT_SETTINGS, parseSettings, TabxSettingTab } from './settings.ts';
 import type { TabxSettings } from './types.ts';
 
@@ -11,11 +12,15 @@ export default class TabxPlugin extends Plugin {
   settings: TabxSettings = { ...DEFAULT_SETTINGS };
   previewService!: TabPreviewService;
   private autoHide!: AutoHideController;
+  private tabBarButton!: TabBarButtonManager;
 
   async onload(): Promise<void> {
     this.settings = parseSettings(await this.loadData());
     this.previewService = new TabPreviewService(this.app);
     this.autoHide = new AutoHideController(this.app, () => this.settings);
+    this.tabBarButton = new TabBarButtonManager(this.app, () =>
+      void this.openGrid(),
+    );
 
     this.registerHoverLinkSource('tabx', {
       display: 'TabX',
@@ -64,11 +69,18 @@ export default class TabxPlugin extends Plugin {
     this.addSettingTab(new TabxSettingTab(this.app, this));
 
     this.applyTabBarStyle();
-    this.app.workspace.onLayoutReady(() => this.applyAutoHide());
+    this.registerEvent(
+      this.app.workspace.on('layout-change', () => this.applyTabBarButton()),
+    );
+    this.app.workspace.onLayoutReady(() => {
+      this.applyAutoHide();
+      this.applyTabBarButton();
+    });
   }
 
   onunload(): void {
     this.autoHide.disable();
+    this.tabBarButton.unmount();
     document.body.removeClass('tabx-scroll-tabs');
     document.body.style.removeProperty('--tabx-min-tab-width');
     this.previewService.invalidate();
@@ -89,6 +101,10 @@ export default class TabxPlugin extends Plugin {
   applyAutoHide(): void {
     if (this.settings.autoHide) this.autoHide.enable();
     else this.autoHide.disable();
+  }
+
+  applyTabBarButton(): void {
+    this.tabBarButton.refresh(this.settings.tabBarButton);
   }
 
   refreshGrids(): void {

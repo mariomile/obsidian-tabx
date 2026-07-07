@@ -78,6 +78,19 @@ export class TabxSettingTab extends PluginSettingTab {
           }),
       );
 
+    new Setting(containerEl)
+      .setName('Tab grid button in tab bar')
+      .setDesc('Show a button in the main tab bar that opens the tab grid.')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.tabBarButton)
+          .onChange(async (value) => {
+            this.plugin.settings.tabBarButton = value;
+            await this.plugin.saveSettings();
+            this.plugin.applyTabBarButton();
+          }),
+      );
+
     new Setting(containerEl).setName('Grid').setHeading();
 
     new Setting(containerEl)

@@ -9,6 +9,7 @@ export interface TabxSettings {
   showTabPreview: boolean;
   previewCharacters: number;
   presentation: Presentation;
+  tabBarButton: boolean;
 }
 
 export interface TabEntry {

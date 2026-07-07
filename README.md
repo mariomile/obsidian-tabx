@@ -13,8 +13,10 @@ Sonar…).
   (icon + full title + close-on-hover). Click to activate, middle-click or the
   ✕ to close. The active tab is highlighted live.
 - **Tab grid** — a Masonry-style card view of your open tabs (icon, title,
-  folder, lazy-loaded excerpt preview). A visual tab switcher: click a card to
-  jump to that tab. Open it from the button in the rail header or the command.
+  folder + date, tag chips, cover image + lazy-loaded excerpt). A visual tab
+  switcher: click a card to jump to that tab. Three densities (compact /
+  editorial / visual) via the header switcher. Open it from the rail header,
+  the button in the main tab bar, or the command.
 - **Auto-hide** — collapse the left sidebar and reveal it by moving the cursor
   to the screen edge. Off by default.
 - **Scrolling tab bar** — let the native top tab bar scroll horizontally
@@ -37,6 +39,8 @@ Sonar…).
 | Auto-hide delay | 250 ms | Wait before collapsing after leaving the sidebar. |
 | Scrolling horizontal tab bar | on | Native tab bar scrolls instead of shrinking tabs. |
 | Minimum tab width | 120 px | Width each tab keeps before the bar scrolls. |
+| Tab grid button in tab bar | on | Inject an "open tab grid" button next to the native "+". |
+| Default card density | editorial | Initial grid layout (compact / editorial / visual). |
 | Show card previews | on | Load a short excerpt on each grid card. |
 | Preview length | 240 | Max characters per card excerpt. |
 
