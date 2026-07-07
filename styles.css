@@ -542,30 +542,23 @@
    clean 6px handle — the tab contents are faded out so no clipped tab text
    bleeds over the view header. Main editor area (.mod-root) only. */
 
-body.tabx-autohide-tabs .mod-root .workspace-tabs {
-  position: relative;
-}
-
-/* Mirror the main area's existing bottom gap at the top, so the hidden tab bar
-   leaves the same breathing room above the pane as below it. */
-body.tabx-autohide-tabs .workspace-split.mod-root {
-  padding-top: var(--tabx-autohide-gap, 8px);
-}
-
+/* Collapsed, the tab header shrinks IN FLOW to a transparent strip whose height
+   mirrors the main area's bottom gap — so it is both the breathing room above
+   the pane and an invisible hover target (no visible bar). On hover it expands
+   in flow, pushing the pane back down to its normal position, exactly like the
+   tab bar sliding in. Main editor area (.mod-root) only. */
 body.tabx-autohide-tabs
   .mod-root
   .workspace-tabs
   > .workspace-tab-header-container {
-  position: absolute;
-  z-index: 15;
-  inset: 0 0 auto 0;
-  max-height: 6px;
+  max-height: var(--tabx-autohide-gap, 8px);
+  min-height: 0;
   overflow: hidden;
-  background: var(--background-secondary);
-  transition: max-height 160ms var(--tabx-ease);
+  background: transparent;
+  transition: max-height 180ms var(--tabx-ease);
 }
 
-/* Fade the tab contents out while collapsed so the handle stays clean. */
+/* Fade the tab contents out while collapsed so no clipped text bleeds. */
 body.tabx-autohide-tabs
   .mod-root
   .workspace-tabs
@@ -579,10 +572,7 @@ body.tabx-autohide-tabs
   .mod-root
   .workspace-tabs
   > .workspace-tab-header-container:hover {
-  max-height: 400px;
-  overflow: visible;
-  background: var(--background-primary);
-  box-shadow: 0 6px 16px -8px rgba(0, 0, 0, 0.35);
+  max-height: 200px;
 }
 
 body.tabx-autohide-tabs
