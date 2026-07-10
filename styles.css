@@ -225,7 +225,6 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  column-span: all;
   margin: clamp(40px, 9vh, 100px) auto;
   color: var(--text-muted);
   text-align: center;
@@ -264,19 +263,30 @@
   background: var(--background-modifier-hover);
 }
 
+/* Masonry via flex columns: the JS layout (grid-view.ts) only decides the
+   column count and round-robins cards into flex-column tracks. Vertical
+   stacking and column widths are pure CSS, so cards can never break into an
+   unpositioned pile — a missed resize just leaves a valid (if not ideal)
+   column count. Round-robin keeps the first row left-to-right in tab order. */
 .tabx-grid {
-  column-width: var(--tabx-card-width, 260px);
-  column-gap: 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
   padding: 4px clamp(14px, 2.2vw, 30px) 22px;
 }
 
-/* Compact — denser column, smaller type. */
-.tabx-grid[data-presentation='compact'] {
-  column-gap: 12px;
+.tabx-col {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
 }
 
-.tabx-grid[data-presentation='compact'] .tabx-card {
-  margin-bottom: 12px;
+/* Compact — denser gaps, smaller type. */
+.tabx-grid[data-presentation='compact'],
+.tabx-grid[data-presentation='compact'] .tabx-col {
+  gap: 12px;
 }
 
 .tabx-grid[data-presentation='compact'] .tabx-card-body {
@@ -305,11 +315,11 @@
 
 .tabx-card {
   position: relative;
-  display: inline-block;
-  width: 100%;
-  margin: 0 0 16px;
   overflow: hidden;
-  break-inside: avoid;
+  /* Scope each card's reflow to itself so resizing the pane (sidebar toggle)
+     only re-lays-out the cards, not the whole subtree — keeps the flex columns
+     tracking the width smoothly even with many cards open. */
+  contain: layout style;
   border: 1px solid var(--background-modifier-border);
   border-radius: var(--tabx-radius);
   background: color-mix(
@@ -505,9 +515,15 @@
 .tabx-card-image {
   display: block;
   width: 100%;
-  max-height: 220px;
+  /* Cap cover height per preset so one image-heavy note can't tower over the
+     rest and unbalance the masonry. Mirrors the All Docs treatment. */
+  max-height: 180px;
   object-fit: cover;
   background: var(--background-secondary);
+}
+
+.tabx-grid[data-presentation='compact'] .tabx-card-image {
+  max-height: 96px;
 }
 
 .tabx-card-preview {
@@ -526,6 +542,55 @@
   color: var(--text-faint);
   font-size: var(--font-ui-small);
   font-style: italic;
+}
+
+/* Poster for tabs with no note preview (plugin views, empty tabs, web
+   viewers): the tab's glyph, enlarged, on a faintly tinted field — gives the
+   card body and presence so it reads as a tile, not a bare title stub. */
+.tabx-card-poster {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 92px;
+  padding: 22px;
+  border-top: 1px solid var(--background-modifier-border);
+  background:
+    radial-gradient(
+      120% 90% at 50% 0%,
+      color-mix(in srgb, var(--interactive-accent) 6%, transparent),
+      transparent 70%
+    ),
+    color-mix(in srgb, var(--background-secondary) 55%, transparent);
+}
+
+.tabx-card-poster-glyph {
+  display: inline-flex;
+  color: color-mix(in srgb, var(--text-muted) 62%, var(--interactive-accent));
+}
+
+.tabx-card-poster-glyph svg {
+  width: 34px;
+  height: 34px;
+  stroke-width: 1.5px;
+}
+
+.tabx-grid[data-presentation='compact'] .tabx-card-poster {
+  min-height: 66px;
+  padding: 16px;
+}
+
+.tabx-grid[data-presentation='compact'] .tabx-card-poster-glyph svg {
+  width: 28px;
+  height: 28px;
+}
+
+.tabx-grid[data-presentation='visual'] .tabx-card-poster {
+  min-height: 128px;
+}
+
+.tabx-grid[data-presentation='visual'] .tabx-card-poster-glyph svg {
+  width: 44px;
+  height: 44px;
 }
 
 @keyframes tabx-shimmer {
@@ -628,6 +693,10 @@ body.tabx-scroll-tabs .mod-root .workspace-tab-header {
   }
 }
 
+/* MOBILE KIT (pattern suite, nato in masonry 2026-07-10): su pointer coarse
+   ogni controllo raggiunge 44pt Apple HIG. I bottoni piccoli (close 22px,
+   rail action 26px) NON si ingrandiscono visivamente: l'hit area si estende
+   con un pseudo-elemento trasparente centrato — inset: calc((100% - 44px)/2). */
 @media (pointer: coarse) {
   .tabx-tab-close,
   .tabx-card-close {
@@ -635,6 +704,19 @@ body.tabx-scroll-tabs .mod-root .workspace-tab-header {
   }
 
   .tabx-tab {
-    min-height: 40px;
+    min-height: 44px;
+  }
+
+  .tabx-tab-close,
+  .tabx-card-close,
+  .tabx-rail-action {
+    position: relative;
+  }
+  .tabx-tab-close::after,
+  .tabx-card-close::after,
+  .tabx-rail-action::after {
+    content: '';
+    position: absolute;
+    inset: calc((100% - 44px) / 2);
   }
 }
