@@ -7,6 +7,7 @@ export interface TabxSettings {
   scrollTabBar: boolean;
   minTabWidth: number;
   showTabPreview: boolean;
+  showTags: boolean;
   previewCharacters: number;
   presentation: Presentation;
   tabBarButton: boolean;

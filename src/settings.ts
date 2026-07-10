@@ -126,6 +126,19 @@ export class TabxSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
+      .setName('Show tags')
+      .setDesc('Display up to four tags per card in the tab grid.')
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.showTags)
+          .onChange(async (value) => {
+            this.plugin.settings.showTags = value;
+            await this.plugin.saveSettings();
+            this.plugin.refreshGrids();
+          }),
+      );
+
+    new Setting(containerEl)
       .setName('Preview length')
       .setDesc('Maximum characters loaded per card excerpt.')
       .addSlider((slider) =>

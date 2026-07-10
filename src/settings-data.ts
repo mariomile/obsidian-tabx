@@ -7,6 +7,7 @@ export const DEFAULT_SETTINGS: TabxSettings = {
   scrollTabBar: true,
   minTabWidth: 120,
   showTabPreview: true,
+  showTags: true,
   previewCharacters: 240,
   presentation: 'editorial',
   tabBarButton: true,
@@ -36,6 +37,7 @@ export function parseSettings(raw: unknown): TabxSettings {
     scrollTabBar: bool(data.scrollTabBar, DEFAULT_SETTINGS.scrollTabBar),
     minTabWidth: clampInt(data.minTabWidth, DEFAULT_SETTINGS.minTabWidth, 60, 400),
     showTabPreview: bool(data.showTabPreview, DEFAULT_SETTINGS.showTabPreview),
+    showTags: bool(data.showTags, DEFAULT_SETTINGS.showTags),
     previewCharacters: clampInt(
       data.previewCharacters,
       DEFAULT_SETTINGS.previewCharacters,

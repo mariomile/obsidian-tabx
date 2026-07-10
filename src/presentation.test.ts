@@ -25,5 +25,6 @@ test('every ordered presentation has a definition', () => {
   for (const mode of PRESENTATION_ORDER) {
     assert.ok(PRESENTATIONS[mode].cardWidth > 0);
     assert.ok(PRESENTATIONS[mode].excerptLines > 0);
+    assert.ok(PRESENTATIONS[mode].gridGap > 0);
   }
 });

@@ -1,14 +1,16 @@
 export type Presentation = 'compact' | 'editorial' | 'visual';
 
 export interface PresentationDef {
+  /** Minimum column width — columns stretch beyond it to fill the row. */
   cardWidth: number;
   excerptLines: number;
+  gridGap: number;
 }
 
 export const PRESENTATIONS: Record<Presentation, PresentationDef> = {
-  compact: { cardWidth: 200, excerptLines: 3 },
-  editorial: { cardWidth: 260, excerptLines: 5 },
-  visual: { cardWidth: 340, excerptLines: 9 },
+  compact: { cardWidth: 200, excerptLines: 3, gridGap: 12 },
+  editorial: { cardWidth: 260, excerptLines: 5, gridGap: 16 },
+  visual: { cardWidth: 340, excerptLines: 9, gridGap: 16 },
 };
 
 export const PRESENTATION_ORDER: Presentation[] = [

@@ -9,6 +9,7 @@ import {
   sortCards,
   type GridSort,
 } from './grid-filter.ts';
+import { assignColumns, computeColumnCount } from './masonry-layout.ts';
 import { leafId } from './obsidian-internals.ts';
 import {
   PRESENTATIONS,
@@ -34,6 +35,9 @@ const DENSITY_LABELS: Record<Presentation, string> = {
 export class GridView extends ItemView {
   private gridEl!: HTMLElement;
   private observer: IntersectionObserver | null = null;
+  private cardEls: HTMLElement[] = [];
+  private columnCount = 0;
+  private lastPolledWidth = -1;
   private renderEpoch = 0;
   private debounce: number | null = null;
   private searchTimer: number | null = null;
@@ -88,6 +92,18 @@ export class GridView extends ItemView {
       { root: this.contentEl, rootMargin: '320px 0px' },
     );
     this.register(() => this.observer?.disconnect());
+
+    // Column-count updates are driven by ONE settle-based poll — deliberately
+    // not ResizeObserver / onResize / workspace 'resize'. Those fire on every
+    // frame of a sidebar-toggle animation, and redistributing (empty + rebuild
+    // columns) mid-animation is a heavy DOM teardown that drops frames and
+    // looks janky. Instead we let the flex columns track the width smoothly via
+    // pure CSS during the animation, and only recompute the column count once
+    // the width has settled. setInterval is also a timer task, so it is immune
+    // to Obsidian's render-loop starvation.
+    this.registerInterval(
+      window.setInterval(() => this.pollLayout(), 100),
+    );
 
     this.registerDomEvent(this.gridEl, 'click', (event) => this.onClick(event));
     this.registerDomEvent(this.gridEl, 'auxclick', (event) => this.onAux(event));
@@ -265,18 +281,83 @@ export class GridView extends ItemView {
   /** Render the current cards through the active query + sort (no re-collect). */
   private renderCards(): void {
     this.renderEpoch += 1;
-    this.gridEl.empty();
     const showPreview = this.getSettings().showTabPreview;
+    const showTags = this.getSettings().showTags;
     const now = Date.now();
     const visible = sortCards(
       this.allCards.filter((card) => matchesQuery(card, this.query)),
       this.sort,
     );
     if (visible.length === 0) {
+      this.cardEls = [];
+      this.columnCount = 0;
+      this.gridEl.empty();
       this.renderEmpty();
       return;
     }
-    for (const card of visible) this.renderCard(card, showPreview, now);
+    // Build the card elements detached, then let layout() distribute them into
+    // flex columns. Cards live in normal flow inside their column — no absolute
+    // positioning, no transforms, no height measurement — so the layout can
+    // never break into an unpositioned pile the way the old JS masonry could.
+    this.cardEls = visible.map((card) =>
+      this.renderCard(card, showPreview, showTags, now),
+    );
+    this.columnCount = 0;
+    this.layout();
+  }
+
+  /**
+   * Poll (every 100ms) that only recomputes columns once the width has SETTLED:
+   * while the width is still changing (a sidebar-toggle animation in flight) it
+   * does nothing, letting the flex columns track the width smoothly via CSS. It
+   * redistributes only after the width holds steady for one tick, so the heavy
+   * empty+rebuild happens once, after the animation — never mid-frame.
+   */
+  private pollLayout(): void {
+    const width = this.gridEl.clientWidth;
+    if (width <= 0) return;
+    if (width !== this.lastPolledWidth) {
+      this.lastPolledWidth = width; // still resizing — wait for it to settle
+      return;
+    }
+    this.layout();
+  }
+
+  /**
+   * Distribute cards into flex columns. Round-robin (card i → column i % N)
+   * keeps the first row left-to-right in tab order; each column stacks its
+   * cards with flexbox so there are no vertical gaps. Column widths and vertical
+   * stacking are pure CSS, so a missed resize leaves a valid (if not ideal)
+   * layout, never a broken one.
+   */
+  private layout(): void {
+    if (this.cardEls.length === 0) return;
+
+    const style = getComputedStyle(this.gridEl);
+    const availableWidth =
+      this.gridEl.clientWidth -
+      parseFloat(style.paddingLeft) -
+      parseFloat(style.paddingRight);
+
+    const def = PRESENTATIONS[this.presentation];
+    // Hidden pane (width 0) → keep one column; redistributes on show. Cards
+    // stay in the DOM either way, so nothing ever vanishes or piles up.
+    const n =
+      availableWidth > 0
+        ? computeColumnCount(availableWidth, def.cardWidth, def.gridGap)
+        : Math.max(1, this.columnCount);
+    if (n === this.columnCount) return; // column count unchanged — nothing to do
+    this.columnCount = n;
+
+    const assignment = assignColumns(this.cardEls.length, n);
+    this.gridEl.empty();
+    const columns: HTMLElement[] = [];
+    for (let i = 0; i < n; i++) {
+      columns.push(this.gridEl.createDiv({ cls: 'tabx-col' }));
+    }
+    this.cardEls.forEach((cardEl, i) => {
+      columns[assignment[i]!]!.appendChild(cardEl);
+    });
   }
 
   private renderEmpty(): void {
@@ -293,9 +374,14 @@ export class GridView extends ItemView {
     });
   }
 
-  private renderCard(card: TabCard, showPreview: boolean, now: number): void {
+  private renderCard(
+    card: TabCard,
+    showPreview: boolean,
+    showTags: boolean,
+    now: number,
+  ): HTMLElement {
     const { entry } = card;
-    const cardEl = this.gridEl.createEl('article', {
+    const cardEl = createEl('article', {
       cls: 'tabx-card',
       attr: {
         'data-leaf-id': entry.id,
@@ -339,7 +425,7 @@ export class GridView extends ItemView {
       }
     }
 
-    if (card.tags.length > 0) {
+    if (showTags && card.tags.length > 0) {
       const tagsEl = body.createDiv({ cls: 'tabx-card-tags' });
       for (const tag of card.tags.slice(0, 4)) {
         tagsEl.createSpan({
@@ -360,7 +446,19 @@ export class GridView extends ItemView {
       });
       host.createDiv({ cls: 'tabx-preview-skeleton' });
       this.observer?.observe(host);
+    } else if (showPreview) {
+      // Non-file tabs (plugin views, empty tabs, web viewers) have no content
+      // to preview. Give them a poster — the tab's own glyph on a tinted
+      // surface — so the card reads as an intentional tile, not an empty stub.
+      const poster = cardEl.createDiv({ cls: 'tabx-card-poster' });
+      const glyph = poster.createSpan({
+        cls: 'tabx-card-poster-glyph',
+        attr: { 'aria-hidden': 'true' },
+      });
+      setIcon(glyph, entry.icon);
     }
+
+    return cardEl;
   }
 
   private async hydrate(host: HTMLElement): Promise<void> {
@@ -389,6 +487,8 @@ export class GridView extends ItemView {
       } else if (preview.imageUrls.length === 0) {
         host.createDiv({ cls: 'tabx-card-empty', text: 'Empty note' });
       }
+      // No relayout needed: the card lives in a flex column, so its column
+      // re-stacks automatically when the content changes height.
     } catch (error) {
       if (!host.isConnected) return;
       host.empty();
