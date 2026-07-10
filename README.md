@@ -51,6 +51,10 @@ Sonar…).
 - **Open tab grid**
 - **Toggle tab bar auto-hide**
 
+## Mobile
+
+**Verified** — `isDesktopOnly: false` in `manifest.json`; `styles.css` ships a `pointer: coarse` media query with 44px hit areas on small controls.
+
 ## Performance
 
 Scale is bounded by the number of open tabs (typically a few dozen), so TabX
