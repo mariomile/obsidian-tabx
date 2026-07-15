@@ -11,6 +11,7 @@ import {
 } from './grid-filter.ts';
 import { assignColumns, computeColumnCount } from './masonry-layout.ts';
 import { leafId } from './obsidian-internals.ts';
+import { cardSignature, planReconcile } from './reconcile.ts';
 import {
   PRESENTATIONS,
   PRESENTATION_ORDER,
@@ -38,7 +39,7 @@ export class GridView extends ItemView {
   private cardEls: HTMLElement[] = [];
   private columnCount = 0;
   private lastPolledWidth = -1;
-  private renderEpoch = 0;
+  private hostSeq = 0;
   private debounce: number | null = null;
   private searchTimer: number | null = null;
   private presentation: Presentation = 'editorial';
@@ -280,7 +281,6 @@ export class GridView extends ItemView {
 
   /** Render the current cards through the active query + sort (no re-collect). */
   private renderCards(): void {
-    this.renderEpoch += 1;
     const showPreview = this.getSettings().showTabPreview;
     const showTags = this.getSettings().showTags;
     const now = Date.now();
@@ -295,13 +295,51 @@ export class GridView extends ItemView {
       this.renderEmpty();
       return;
     }
-    // Build the card elements detached, then let layout() distribute them into
-    // flex columns. Cards live in normal flow inside their column — no absolute
-    // positioning, no transforms, no height measurement — so the layout can
-    // never break into an unpositioned pile the way the old JS masonry could.
-    this.cardEls = visible.map((card) =>
-      this.renderCard(card, showPreview, showTags, now),
+
+    // Reconcile against what's already on screen, keyed by leaf id. A survivor
+    // keeps its exact DOM element — and therefore its already-hydrated preview —
+    // instead of being recreated. Recreating every card on each rebuild is what
+    // made closing a single tab flash the whole grid back through its skeletons.
+    const prevOrder = this.cardEls.map((el) => el.dataset.leafId ?? '');
+    const prevById = new Map(
+      this.cardEls.map((el) => [el.dataset.leafId ?? '', el] as const),
     );
+    let recreatedSurvivor = false;
+    const nextEls = visible.map((card) => {
+      const id = card.entry.id;
+      const sig = cardSignature(card, showPreview, showTags);
+      const existing = prevById.get(id);
+      if (existing) {
+        prevById.delete(id);
+        if (existing.dataset.sig === sig) return existing; // unchanged → reuse
+        recreatedSurvivor = true; // content changed → rebuild just this card
+      }
+      return this.renderCard(card, showPreview, showTags, now, sig);
+    });
+    const removedEls = [...prevById.values()];
+    const nextOrder = nextEls.map((el) => el.dataset.leafId ?? '');
+    this.cardEls = nextEls;
+
+    // A pure removal (no adds, no reorder, no content change) at an unchanged
+    // column count is applied surgically: drop just the closed cards and leave
+    // every survivor exactly where it sits. No round-robin reshuffle → no jump.
+    const columnsReady =
+      this.columnCount > 0 && this.gridEl.querySelector('.tabx-col') !== null;
+    const plan = planReconcile(prevOrder, nextOrder);
+    if (
+      columnsReady &&
+      !recreatedSurvivor &&
+      plan.kind === 'remove' &&
+      this.targetColumnCount() === this.columnCount
+    ) {
+      for (const el of removedEls) el.remove();
+      return;
+    }
+
+    // Everything else (adds, sort/search reorders, column-count changes):
+    // redistribute round-robin. layout() reuses the same nodes — appendChild
+    // moves them rather than recreating — so previews still don't reflash; only
+    // a card's column can change. Departed cards are dropped by gridEl.empty().
     this.columnCount = 0;
     this.layout();
   }
@@ -330,22 +368,27 @@ export class GridView extends ItemView {
    * stacking are pure CSS, so a missed resize leaves a valid (if not ideal)
    * layout, never a broken one.
    */
-  private layout(): void {
-    if (this.cardEls.length === 0) return;
-
+  /**
+   * How many columns the current width wants. Hidden pane (width 0) → keep the
+   * current count; it redistributes on show. Cards stay in the DOM either way,
+   * so nothing ever vanishes or piles up.
+   */
+  private targetColumnCount(): number {
     const style = getComputedStyle(this.gridEl);
     const availableWidth =
       this.gridEl.clientWidth -
       parseFloat(style.paddingLeft) -
       parseFloat(style.paddingRight);
-
     const def = PRESENTATIONS[this.presentation];
-    // Hidden pane (width 0) → keep one column; redistributes on show. Cards
-    // stay in the DOM either way, so nothing ever vanishes or piles up.
-    const n =
-      availableWidth > 0
-        ? computeColumnCount(availableWidth, def.cardWidth, def.gridGap)
-        : Math.max(1, this.columnCount);
+    return availableWidth > 0
+      ? computeColumnCount(availableWidth, def.cardWidth, def.gridGap)
+      : Math.max(1, this.columnCount);
+  }
+
+  private layout(): void {
+    if (this.cardEls.length === 0) return;
+
+    const n = this.targetColumnCount();
     if (n === this.columnCount) return; // column count unchanged — nothing to do
     this.columnCount = n;
 
@@ -379,12 +422,14 @@ export class GridView extends ItemView {
     showPreview: boolean,
     showTags: boolean,
     now: number,
+    sig: string,
   ): HTMLElement {
     const { entry } = card;
     const cardEl = createEl('article', {
       cls: 'tabx-card',
       attr: {
         'data-leaf-id': entry.id,
+        'data-sig': sig,
         role: 'button',
         tabindex: '0',
         'aria-label': `Activate ${entry.title}`,
@@ -441,7 +486,12 @@ export class GridView extends ItemView {
         cls: 'tabx-preview-host is-loading',
         attr: {
           'data-file': entry.filePath,
-          'data-epoch': String(this.renderEpoch),
+          // Per-host token: a host is created once for one card and never
+          // reused for another, so an in-flight preview is cancelled only when
+          // *its own* card is discarded (host disconnected). This replaces a
+          // global render epoch, which would have wrongly cancelled a reused
+          // survivor's still-loading preview on the next rebuild.
+          'data-token': String(this.hostSeq++),
         },
       });
       host.createDiv({ cls: 'tabx-preview-skeleton' });
@@ -463,20 +513,14 @@ export class GridView extends ItemView {
 
   private async hydrate(host: HTMLElement): Promise<void> {
     const path = host.dataset.file;
-    const epoch = host.dataset.epoch;
+    const token = host.dataset.token;
     if (!path) return;
     try {
       const preview = await this.previews.getPreview(
         path,
         this.getSettings().previewCharacters,
       );
-      if (
-        !host.isConnected ||
-        host.dataset.epoch !== epoch ||
-        epoch !== String(this.renderEpoch)
-      ) {
-        return;
-      }
+      if (!host.isConnected || host.dataset.token !== token) return;
       host.empty();
       host.removeClass('is-loading');
       if (preview.imageUrls.length > 0) {
