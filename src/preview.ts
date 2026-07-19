@@ -8,6 +8,15 @@ export interface PreviewProvider {
   invalidate(path?: string): void;
 }
 
+interface MasonryPreviewApi {
+  getFilePreview(
+    filePath: string,
+    maxCharacters: number,
+    allowRemoteImages?: boolean,
+  ): Promise<TabPreview>;
+  invalidatePreview(path?: string): void;
+}
+
 const IMAGE_EXTENSIONS = new Set([
   'avif',
   'bmp',
@@ -33,6 +42,15 @@ export class TabPreviewService implements PreviewProvider {
     const file = this.app.vault.getAbstractFileByPath(filePath);
     if (!(file instanceof TFile) || file.extension !== 'md') return EMPTY;
 
+    const shared = this.masonryPreviewApi();
+    if (shared) {
+      try {
+        return await shared.getFilePreview(filePath, maxChars, false);
+      } catch (error) {
+        console.warn('TabX: shared Masonry preview failed; using local fallback', error);
+      }
+    }
+
     const key = `${filePath}:${file.stat.mtime}:${maxChars}`;
     const cached = this.cache.get(key);
     if (cached) {
@@ -56,6 +74,7 @@ export class TabPreviewService implements PreviewProvider {
   }
 
   invalidate(path?: string): void {
+    this.masonryPreviewApi()?.invalidatePreview(path);
     if (!path) {
       this.cache.clear();
       return;
@@ -112,6 +131,13 @@ export class TabPreviewService implements PreviewProvider {
       if (!oldest) return;
       this.cache.delete(oldest);
     }
+  }
+
+  private masonryPreviewApi(): MasonryPreviewApi | null {
+    const plugins = (this.app as App & {
+      plugins?: { plugins?: Record<string, { api?: MasonryPreviewApi }> };
+    }).plugins?.plugins;
+    return plugins?.masonry?.api ?? null;
   }
 }
 

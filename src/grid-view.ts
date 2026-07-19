@@ -36,9 +36,11 @@ const DENSITY_LABELS: Record<Presentation, string> = {
 export class GridView extends ItemView {
   private gridEl!: HTMLElement;
   private observer: IntersectionObserver | null = null;
+  private resizeObserver: ResizeObserver | null = null;
   private cardEls: HTMLElement[] = [];
   private columnCount = 0;
-  private lastPolledWidth = -1;
+  private lastObservedWidth = -1;
+  private resizeSettleTimer: number | null = null;
   private hostSeq = 0;
   private debounce: number | null = null;
   private searchTimer: number | null = null;
@@ -94,17 +96,20 @@ export class GridView extends ItemView {
     );
     this.register(() => this.observer?.disconnect());
 
-    // Column-count updates are driven by ONE settle-based poll — deliberately
-    // not ResizeObserver / onResize / workspace 'resize'. Those fire on every
-    // frame of a sidebar-toggle animation, and redistributing (empty + rebuild
-    // columns) mid-animation is a heavy DOM teardown that drops frames and
-    // looks janky. Instead we let the flex columns track the width smoothly via
-    // pure CSS during the animation, and only recompute the column count once
-    // the width has settled. setInterval is also a timer task, so it is immune
-    // to Obsidian's render-loop starvation.
-    this.registerInterval(
-      window.setInterval(() => this.pollLayout(), 100),
-    );
+    // Observe only actual size changes and apply one trailing layout after the
+    // resize animation settles. This preserves the no-mid-animation rebuild
+    // behavior without waking the main thread ten times per second while idle.
+    this.resizeObserver = new ResizeObserver((entries) => {
+      const width = Math.round(entries.at(-1)?.contentRect.width ?? this.gridEl.clientWidth);
+      if (width <= 0 || width === this.lastObservedWidth) return;
+      this.lastObservedWidth = width;
+      if (this.resizeSettleTimer !== null) window.clearTimeout(this.resizeSettleTimer);
+      this.resizeSettleTimer = window.setTimeout(() => {
+        this.resizeSettleTimer = null;
+        this.layout();
+      }, 120);
+    });
+    this.resizeObserver.observe(this.gridEl);
 
     this.registerDomEvent(this.gridEl, 'click', (event) => this.onClick(event));
     this.registerDomEvent(this.gridEl, 'auxclick', (event) => this.onAux(event));
@@ -140,6 +145,10 @@ export class GridView extends ItemView {
   async onClose(): Promise<void> {
     if (this.debounce !== null) window.clearTimeout(this.debounce);
     if (this.searchTimer !== null) window.clearTimeout(this.searchTimer);
+    if (this.resizeSettleTimer !== null) window.clearTimeout(this.resizeSettleTimer);
+    this.resizeSettleTimer = null;
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
     this.observer?.disconnect();
     this.observer = null;
   }
@@ -341,23 +350,6 @@ export class GridView extends ItemView {
     // moves them rather than recreating — so previews still don't reflash; only
     // a card's column can change. Departed cards are dropped by gridEl.empty().
     this.columnCount = 0;
-    this.layout();
-  }
-
-  /**
-   * Poll (every 100ms) that only recomputes columns once the width has SETTLED:
-   * while the width is still changing (a sidebar-toggle animation in flight) it
-   * does nothing, letting the flex columns track the width smoothly via CSS. It
-   * redistributes only after the width holds steady for one tick, so the heavy
-   * empty+rebuild happens once, after the animation — never mid-frame.
-   */
-  private pollLayout(): void {
-    const width = this.gridEl.clientWidth;
-    if (width <= 0) return;
-    if (width !== this.lastPolledWidth) {
-      this.lastPolledWidth = width; // still resizing — wait for it to settle
-      return;
-    }
     this.layout();
   }
 
