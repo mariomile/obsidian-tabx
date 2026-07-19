@@ -4,7 +4,7 @@ See your open tabs as a **vertical rail** in the sidebar and as a **Masonry-styl
 grid** — with an optional hover-to-reveal sidebar and a horizontally-scrolling
 native tab bar.
 
-Part of the marioverse Obsidian plugin fleet (sibling of Masonry, Horizon,
+Part of the marioverse Obsidian plugin suite (sibling of Masonry, Horizon,
 Sonar…).
 
 ## Features
