@@ -7,6 +7,11 @@ native tab bar.
 Part of the marioverse Obsidian plugin suite (sibling of Masonry, Horizon,
 Sonar…).
 
+<p align="center">
+  <img src="docs/grid.png" width="900" alt="TabX — the tab grid" />
+</p>
+<p align="center"><em>Every open tab as a Masonry-style card, with live content previews.</em></p>
+
 ## Features
 
 - **Rail** — a left-sidebar panel listing every open tab as a vertical row
