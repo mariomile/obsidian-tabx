@@ -68,6 +68,10 @@ updates the active-tab highlight in O(1), lazy-loads grid previews via an
 `IntersectionObserver`, caches excerpts (LRU over `cachedRead`), and never
 forces deferred tab views to load just to draw a row.
 
+## Try it
+
+See it running in the [Obsidianverse sample vault](https://github.com/mariomile/obsidianverse-sample-vault) — a small, fictional vault with the whole plugin suite pre-configured.
+
 ## License
 
 MIT © Mario Miletta
