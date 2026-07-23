@@ -43,7 +43,7 @@ export class RailView extends ItemView implements HoverParent {
   }
 
   getIcon(): string {
-    return 'gallery-vertical';
+    return 'hi-square-stack';
   }
 
   async onOpen(): Promise<void> {
