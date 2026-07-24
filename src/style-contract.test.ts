@@ -8,25 +8,30 @@ import test from 'node:test';
  * obsidian-sonar's contract (commit 3acb417) — the same enforcement pattern
  * now lands uniformly across sonar, masonry, portal, and tabx.
  *
- * tabx has not (yet) migrated to mv-kit's `var(--mv-token, fallback)`
- * consumption idiom — unlike masonry/portal, it never references
- * `--mv-*`/`--cosmos-*` at all. It uses its own local design tokens
- * (`--tabx-ease`, `--tabx-radius`, `--tabx-autohide-delay`) defined once at
- * `:root` and referenced everywhere else via `var(--tabx-*)`. Assertion 1
- * below is adapted to that reality: it encodes only the state actually
- * landed — not aspirational rules — so raw ms/hex/cubic-bezier values are
- * allowed at the `:root` token-definition site and disallowed everywhere
- * else, rather than requiring the mv-kit var()-fallback shape tabx doesn't
- * use. A future mv-kit migration should tighten this back to the
- * masonry/portal shape. Three assertions:
+ * tabx has since migrated to mv-kit's `var(--mv-token, fallback)` /
+ * `var(--cosmos-token, fallback)` consumption idiom (wave 4,
+ * docs/2026-07-mv-kit-audit.md) — it now consumes `--mv-wash`, `--mv-r-card`,
+ * `--mv-r-chip`, `--cosmos-t-fast`, `--cosmos-t-base`, `--cosmos-touch-min`,
+ * `--cosmos-press-scale`, and `--cosmos-native`, each with a literal fallback
+ * equal to tabx's pre-migration value. It still ALSO keeps its own local
+ * design tokens (`--tabx-ease`, `--tabx-radius`, `--tabx-autohide-delay`)
+ * defined once at `:root` and referenced everywhere else via `var(--tabx-*)`
+ * — `--tabx-ease`/`--tabx-radius` are now themselves consumers (their values
+ * are `var(--mv-wash, …)`/`var(--mv-r-card, …)`), so the suite tokens flow
+ * through tabx's own naming layer rather than replacing it. Assertion 1
+ * below allows a raw literal in exactly three places: inside a
+ * `var(--token, <fallback>)` fallback (mv-kit's own idiom, now the primary
+ * path), inside a `:root { --tabx-*: ... }` token definition (tabx's
+ * pre-existing local-token pattern, still used for tokens with no suite
+ * equivalent, e.g. `--tabx-autohide-delay`), or as the standard
+ * `0ms`/`0.01ms` reduced-motion/reset duration (an a11y escape hatch, not a
+ * design value). Three assertions:
  *
  * 1. every raw ms/hex/cubic-bezier value appears only where tabx's own
- *    convention allows it: inside a `:root { --tabx-*: ... }` token
- *    definition, or as the standard `0ms`/`0.01ms` reduced-motion/reset
- *    duration (an a11y escape hatch rather than a design value). Everywhere
- *    else in the stylesheet, only `var(--tabx-*)` may appear — a bare
- *    literal transition duration sitting next to `var(--tabx-ease)` in a
- *    shorthand would be a violation of tabx's own token discipline.
+ *    convention allows it (the three cases above). Everywhere else, only a
+ *    `var(...)` reference may appear — a bare literal transition duration
+ *    sitting next to `var(--tabx-ease)` in a shorthand would be a violation
+ *    of tabx's own token discipline.
  * 2. !important declarations are capped at 6, the exact current count — the
  *    ceiling can only ratchet down, so any future edit that adds one without
  *    removing another fails the test. Every survivor carries an adjacent
@@ -89,8 +94,10 @@ test('raw ms/hex/cubic-bezier values appear only where the token convention allo
   // A raw ms/hex/cubic-bezier is allowed when it either:
   //   - sits inside a `var(--token, <fallback>)` fallback (mv-kit's golden
   //     rule: consume the token, keep the literal as the no-Cosmos
-  //     fallback) — tabx doesn't consume mv-kit tokens today, but this stays
-  //     so the check still holds if/when it migrates, or
+  //     fallback) — the primary path since the wave-4 mv-kit migration
+  //     (--mv-wash, --mv-r-card, --mv-r-chip, --cosmos-t-fast,
+  //     --cosmos-t-base, --cosmos-touch-min, --cosmos-press-scale,
+  //     --cosmos-native all consumed this way), or
   //   - is a `--tabx-*` token DEFINITION inside `:root { ... }` — tabx's own
   //     local design-token pattern: define the literal once, reference it
   //     everywhere else via `var(--tabx-*)`, or
@@ -139,10 +146,12 @@ test('!important declarations are capped at the current count (ratchet down only
   // Count declarations only: the justification comments next to each
   // survivor mention the word too.
   const importantCount = (stripComments(css).match(/!important/g) ?? []).length;
-  // Ceiling frozen at the count present in styles.css as of this test's
-  // introduction (6 — see the `!important` declarations at lines 14, 160,
-  // 199-202: pane-container padding reset and the auto-hide hover-state
-  // border/background/shadow overrides). This ceiling may only be LOWERED,
+  // Ceiling frozen at 6 (unchanged by the wave-4 mv-kit fixes — no
+  // !important was added or removed, only justification comments were added
+  // next to each survivor): the .tabx-rail-content / .tabx-grid-content
+  // `padding: 0` view-content overrides, and the .tabx-search-input
+  // padding-inline/border-color/background/box-shadow overrides that flatten
+  // native `input[type='search']` chrome. This ceiling may only be LOWERED,
   // never raised: if a future edit needs an !important, it must first
   // remove one elsewhere.
   assert.ok(

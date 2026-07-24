@@ -1,9 +1,21 @@
 /* TabX — vertical tab rail, tab grid, auto-hide hot-zone, scrolling tab bar.
-   Native theme variables only; no hardcoded colors. */
+   Native theme variables only; no hardcoded colors.
+
+   mv-kit (obsidian-cosmos-theme/docs/mv-kit.md) is the normative coherence
+   checklist for this stylesheet; the per-rule verdict lives in
+   docs/2026-07-mv-kit-audit.md. Golden rule: the plugin is theme-independent
+   — it CONSUMES --cosmos-* / --mv-* tokens with an inline literal fallback
+   (the value TabX has always shipped, so nothing moves when Cosmos is
+   absent) and never defines those tokens itself. */
 
 :root {
-  --tabx-ease: cubic-bezier(0.25, 1, 0.5, 1);
-  --tabx-radius: 9px;
+  /* mv-kit §3: the file's only wash easing is --mv-wash — consumed with
+     TabX's own historical literal as the fallback. */
+  --tabx-ease: var(--mv-wash, cubic-bezier(0.25, 1, 0.5, 1));
+  /* mv-kit §1: card radius is the suite's --mv-r-card slot; TabX's own
+     value (9px) differs from the canonical 11px, so it stays the fallback
+     rather than being silently changed to match Masonry's card. */
+  --tabx-radius: var(--mv-r-card, 9px);
   /* Grace period before the auto-hidden tab bar collapses again on mouse-out. */
   --tabx-autohide-delay: 450ms;
 }
@@ -11,6 +23,10 @@
 /* ---------------------------------------------------------------- Rail --- */
 
 .tabx-rail-content {
+  /* !important justified: Obsidian core styles the same node via
+     `.workspace-leaf-content > .view-content` (higher specificity than one
+     plugin class), setting the standard view padding; the rail needs a true
+     edge-to-edge list with no inherited gutters. */
   padding: 0 !important;
   overflow: hidden;
 }
@@ -74,9 +90,9 @@
   border-radius: var(--radius-s);
   cursor: pointer;
   transition:
-    background-color 120ms var(--tabx-ease),
-    box-shadow 120ms var(--tabx-ease),
-    color 120ms var(--tabx-ease);
+    background-color var(--cosmos-t-fast, 120ms) var(--tabx-ease),
+    box-shadow var(--cosmos-t-fast, 120ms) var(--tabx-ease),
+    color var(--cosmos-t-fast, 120ms) var(--tabx-ease);
 }
 
 /* Active state mirrors the native horizontal tab: a lifted, filled surface
@@ -141,7 +157,7 @@
   height: 22px;
   color: var(--text-faint);
   opacity: 0;
-  transition: opacity 120ms var(--tabx-ease);
+  transition: opacity var(--cosmos-t-fast, 120ms) var(--tabx-ease);
 }
 
 .tabx-tab:hover .tabx-tab-close,
@@ -157,6 +173,8 @@
 /* ---------------------------------------------------------------- Grid --- */
 
 .tabx-grid-content {
+  /* !important justified: same core `.view-content` padding override as
+     .tabx-rail-content above — the grid also needs an edge-to-edge canvas. */
   padding: 0 !important;
   overflow: auto;
 }
@@ -196,6 +214,11 @@
 .tabx-search-input {
   width: 100%;
   min-height: 34px;
+  /* !important x4 justified: core styles this control through the
+     `input[type='search']` attribute selector (specificity 0,1,1), which
+     outranks `.tabx-search-input` (0,1,0) on padding, border, background,
+     and the focus/inset shadow. Only !important flattens native search
+     chrome into the grid toolbar field. */
   padding-inline: 32px 10px !important;
   border-color: var(--background-modifier-border) !important;
   background: var(--background-secondary) !important;
@@ -239,7 +262,10 @@
 
 .tabx-grid-empty p {
   margin: 0;
-  font-size: var(--font-ui-small);
+  /* mv-kit §4 whisper recipe: --text-faint + --font-ui-smaller, not
+     --text-muted/--font-ui-small — an empty state is not a call to action. */
+  color: var(--text-faint);
+  font-size: var(--font-ui-smaller);
 }
 
 .tabx-density {
@@ -329,8 +355,8 @@
   );
   cursor: pointer;
   transition:
-    border-color 140ms var(--tabx-ease),
-    box-shadow 180ms var(--tabx-ease);
+    border-color var(--cosmos-t-fast, 140ms) var(--tabx-ease),
+    box-shadow var(--cosmos-t-base, 180ms) var(--tabx-ease);
 }
 
 @media (hover: hover) {
@@ -366,7 +392,7 @@
   color: var(--text-muted);
   background: color-mix(in srgb, var(--background-primary) 88%, transparent);
   opacity: 0;
-  transition: opacity 120ms var(--tabx-ease);
+  transition: opacity var(--cosmos-t-fast, 120ms) var(--tabx-ease);
 }
 
 .tabx-card:hover .tabx-card-close,
@@ -450,7 +476,9 @@
   max-width: 100%;
   padding: 1px 6px;
   border: 1px solid var(--background-modifier-border);
-  border-radius: 5px;
+  /* mv-kit §1: tag chip radius is the suite's --mv-r-chip (= masonry
+     .masonry-tag-chip's canonical 5px, matching TabX's own value exactly). */
+  border-radius: var(--mv-r-chip, 5px);
   background: transparent;
   color: var(--text-muted);
   font-family: var(--font-interface);
@@ -539,8 +567,10 @@
 
 .tabx-card-empty {
   padding: 14px 16px 16px;
+  /* mv-kit §4 whisper recipe: color already correct; font-size dropped one
+     step to --font-ui-smaller (was --font-ui-small). */
   color: var(--text-faint);
-  font-size: var(--font-ui-small);
+  font-size: var(--font-ui-smaller);
   font-style: italic;
 }
 
@@ -623,8 +653,13 @@ body.tabx-autohide-tabs
   overflow: hidden;
   background: transparent;
   /* The collapse (revert to this state) waits out the tolerance delay; if the
-     cursor comes back within it, the bar never closes. */
-  transition: max-height 180ms var(--tabx-ease) var(--tabx-autohide-delay);
+     cursor comes back within it, the bar never closes.
+     max-height is a layout property, not transform/opacity — an accepted
+     exception, not an oversight: this is mv-kit §3's own "structural panel
+     movement" category (--cosmos-t-panel's own doc example is sidebar
+     open/close), and the bar is genuinely in-flow (it reclaims/yields real
+     editor space), so there is no transform-only way to animate it. */
+  transition: max-height var(--cosmos-t-base, 180ms) var(--tabx-ease) var(--tabx-autohide-delay);
 }
 
 /* Fade the tab contents out while collapsed so no clipped text bleeds. */
@@ -634,7 +669,7 @@ body.tabx-autohide-tabs
   > .workspace-tab-header-container
   > * {
   opacity: 0;
-  transition: opacity 120ms var(--tabx-ease) var(--tabx-autohide-delay);
+  transition: opacity var(--cosmos-t-fast, 120ms) var(--tabx-ease) var(--tabx-autohide-delay);
 }
 
 /* Reveal immediately on hover (no delay); the delay only applies to closing. */
@@ -684,7 +719,10 @@ body.tabx-scroll-tabs .mod-root .workspace-tab-header {
   .tabx-tab,
   .tabx-tab-close,
   .tabx-card,
-  .tabx-card-close {
+  .tabx-card-close,
+  .tabx-rail-action,
+  .tabx-sort-button,
+  .tabx-density-button {
     transition-duration: 0.01ms;
   }
 
@@ -694,9 +732,11 @@ body.tabx-scroll-tabs .mod-root .workspace-tab-header {
 }
 
 /* MOBILE KIT (pattern suite, nato in masonry 2026-07-10): su pointer coarse
-   ogni controllo raggiunge 44pt Apple HIG. I bottoni piccoli (close 22px,
-   rail action 26px) NON si ingrandiscono visivamente: l'hit area si estende
-   con un pseudo-elemento trasparente centrato — inset: calc((100% - 44px)/2). */
+   ogni controllo raggiunge 44pt Apple HIG (mv-kit §2 MUST: --cosmos-touch-min).
+   I bottoni piccoli (close 22px, rail action 26px, sort 34px, density 28px)
+   NON si ingrandiscono visivamente: l'hit area si estende con un
+   pseudo-elemento trasparente centrato —
+   inset: calc((100% - var(--cosmos-touch-min, 44px)) / 2). */
 @media (pointer: coarse) {
   .tabx-tab-close,
   .tabx-card-close {
@@ -704,19 +744,51 @@ body.tabx-scroll-tabs .mod-root .workspace-tab-header {
   }
 
   .tabx-tab {
-    min-height: 44px;
+    min-height: var(--cosmos-touch-min, 44px);
+  }
+
+  /* mv-kit §2: the search field and the sort/density toggle buttons are real
+     tap targets that sat under the 44px floor on phone (34px / 34px / 28px)
+     and were missing from this block entirely — genuine gaps, not
+     judgement calls, matching the class of miss found in Masonry's
+     .masonry-load-more / .masonry-retry-button wave-3 audit. */
+  .tabx-search-input {
+    min-height: var(--cosmos-touch-min, 44px);
+  }
+
+  .tabx-sort-button {
+    width: var(--cosmos-touch-min, 44px);
+    height: var(--cosmos-touch-min, 44px);
   }
 
   .tabx-tab-close,
   .tabx-card-close,
-  .tabx-rail-action {
+  .tabx-rail-action,
+  .tabx-density-button {
     position: relative;
   }
   .tabx-tab-close::after,
   .tabx-card-close::after,
-  .tabx-rail-action::after {
+  .tabx-rail-action::after,
+  .tabx-density-button::after {
     content: '';
     position: absolute;
-    inset: calc((100% - 44px) / 2);
+    inset: calc((100% - var(--cosmos-touch-min, 44px)) / 2);
+  }
+
+  /* mv-kit §3 MUST: tap targets apply a press-scale confirmation on
+     active/press. transform-only, composited; the duration/easing are
+     token-sourced so Cosmos's prefers-reduced-motion zeroing covers it for
+     free (see the explicit reduced-motion block below for the no-Cosmos
+     case). */
+  .tabx-tab:active,
+  .tabx-card:active,
+  .tabx-tab-close:active,
+  .tabx-card-close:active,
+  .tabx-rail-action:active,
+  .tabx-sort-button:active,
+  .tabx-density-button:active {
+    transition: transform var(--cosmos-t-fast, 140ms) var(--cosmos-native, cubic-bezier(0.32, 0.72, 0, 1));
+    transform: scale(var(--cosmos-press-scale, 0.98));
   }
 }
