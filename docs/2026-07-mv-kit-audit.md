@@ -219,3 +219,136 @@ Run on the post-fix tree, exit codes and counts quoted verbatim:
   phone fixes (44px floors on the search field / sort button / density
   button hit-area, press-scale) are verified by reading the resulting CSS
   values against the kit's phone column, not by rendering on-device.
+
+---
+
+# §6 — wave 2026-07 dinamica
+
+Audit of `styles.css` (post wave-4, 794 lines pre-fix, 826 lines post-fix)
+against `obsidian-cosmos-theme/docs/mv-kit.md` §6 ("Elevation & motion
+depth", landed cosmos-theme commit `10f5ddc`), both desktop and phone
+columns. Scope: the four §6 sub-rules only (elevation hierarchy, hover
+richness, drag polish, panel/tab transitions) — coherence-only, no layout
+redesign, no new components, no new CSS files, per
+`docs/2026-07-25-dynamics-depth-design.md`'s inherited non-goals. TabX owns
+no drag surface and no tab-content-swap surface of its own (see the Drag
+polish and Panel/tab transitions rows below) — this wave's real findings are
+entirely in the Hover richness and Panel-duration-tier areas.
+
+## Elevation hierarchy
+
+| Surface | Desktop | Phone | Verdict |
+|---|---|---|---|
+| `.tabx-tab.is-active` `box-shadow` (rail row) | hand-picked 2-layer `rgba(...)` shadow | same, no phone variant | **waived, unchanged from wave 4's verdict on the identical pattern** — mv-kit §6's shadow-tier MUST covers *floating* surfaces (Pop: menu/tooltip/popover/prompt, dismissed by outside-click) and *persistent* Island surfaces (a sidebar/panel that doesn't close on outside-click). A rail row inside a scrolling list is neither — it's inline flow content, permanently part of the document, no dismiss behaviour at all. Re-verified this wave rather than assumed: still true, nothing changed about this selector's category. |
+| `.tabx-card:hover` / `.tabx-card.is-active` `box-shadow` (grid card) | hand-picked `color-mix(...)` shadow / inset ring | same, no phone variant (hover unreachable on touch; `.is-active` ring still applies) | **waived, same reasoning** — a card inside a scrolling masonry grid, not a floating/persistent surface in §6's sense. The wave-4 audit already reached this verdict for §1; re-confirmed under §6's more detailed tier language, no change. |
+| Floating surfaces of TabX's own (menu, popover, tooltip, prompt, modal) | none exist | none exist | **waived, nothing to tokenize** — TabX renders no popover/menu/modal chrome; `grep -n "createDiv.*menu\|Menu(\|Modal(" src/*.ts` (excluding test files): zero hits. Nothing in TabX's surface set qualifies for `--cosmos-pop-shadow` or `--cosmos-island-shadow`. |
+| Two tiers stacked on one element (Pop shadow **and** glass blur) | not present | not present | **pass, not applicable** — TabX has no glass/blur surface anywhere (`grep -n "blur\|glass" styles.css`: zero hits), so the "never stack two tiers" MUST NOT has nothing to violate. |
+
+## Hover richness
+
+| Surface | Desktop | Phone | Verdict |
+|---|---|---|---|
+| `.tabx-card:hover` | was colour/shadow wash only (`border-color` + `box-shadow`), **no lift transform** | hover unreachable on touch (correctly gated `@media (hover: hover)` already) — the physical-response equivalent is the pre-existing `:active { transform: scale(--cosmos-press-scale) }` in the `@media (pointer: coarse)` block | **fixed** — added `transform: translateY(-1px)` inside the existing `@media (hover: hover)` block, plus a new `transform` transition on the base rule using `--cosmos-t-fast` + `--mv-lift` (a *new* easing token for this file — every other transition uses `--tabx-ease`/`--mv-wash`, correctly, since `--mv-lift` is reserved for physical-transform easing, not colour washes, per the kit's own "the two easings are not interchangeable" MUST). This is the canonical case the kit's own §6 example (`.card:hover { transform: translateY(-1px) }`) targets almost verbatim. |
+| `.tabx-tab:hover` (rail row) | colour wash only (`background-color`) | hover unreachable on touch (gated) | **pass, correctly colour-only** — this is a *row* in §6's own vocabulary (the kit's example explicitly splits `.row:hover` = wash-only from `.card:hover` = wash+lift). A rail row inline in a list is the row case, not the card case; adding a lift here would be inventing richness the kit doesn't ask for on this surface class. |
+| `.tabx-rail-action:hover`, `.tabx-tab-close:hover`, `.tabx-sort-button:hover`, `.tabx-card-close:hover` | were bare top-level `:hover` rules, **not gated by `@media (hover: hover)`** | **all four are phone-reachable**: `.tabx-tab-close`/`.tabx-card-close` are forced to `opacity: 1` (always visible, always tappable) inside the existing `@media (pointer: coarse)` block; `.tabx-rail-action`/`.tabx-sort-button` are plain always-visible toolbar icons. A bare `:hover` on any of them fires on tap and the wash state visually sticks until an unrelated tap elsewhere — no pointer ever "leaves" on touch to clear it. | **fixed** — all four wrapped in `@media (hover: hover)`. This is the kit's own explicit correctness MUST ("a touch tap must never leave a stuck hover state… plugins must not fight it with custom `:hover` outside that media query on phone-reachable elements"), not a richness judgement call — genuine gaps, not a style choice. |
+| `> .workspace-tab-header-container:hover` (auto-hide bar's reveal trigger, native-DOM selector TabX styles via `body.tabx-autohide-tabs`) | bare `:hover`, ungated | same selector, ungated | **waived, different defect class from the row above — flagged, not fixed.** This selector cannot leave a *stuck visual state* on touch (the specific MUST this rule enforces): confirmed via `grep -rn "Platform\|isMobile" src/*.ts` (zero hits) that the auto-hide feature has no mobile gating at all, so `body.tabx-autohide-tabs` can be toggled on mobile, but since touch has no hover concept the bar simply never reveals there — no state gets stuck because none ever activates. The actual gap this surfaces (auto-hide is unreachable on phone once enabled) is a *feature-reachability* problem, not a §6 elevation/motion-depth defect, and fixing it means designing a tap-to-reveal affordance — new interaction design, forbidden by this wave's "no new components" non-goal. Flagged here for a future cantiere, not silently left. |
+| `--mv-wash` vs `--mv-lift` used correctly (not interchanged) | `.tabx-card:hover`'s new `transform` uses `--mv-lift`; every colour/shadow wash across the file (`.tabx-tab`, `.tabx-tab-close`, `.tabx-card` border/shadow, `.tabx-card-close`) still uses `--tabx-ease` (itself `var(--mv-wash, …)`) | same | **pass (verified, not assumed)** — `grep -n "mv-lift\|mv-wash" styles.css` confirms exactly one `--mv-lift` consumption site (the new card lift) and the pre-existing `--mv-wash` consumption stays on `--tabx-ease`'s definition only; no site mixes the two. |
+
+## Drag polish
+
+| Surface | Desktop | Phone | Verdict |
+|---|---|---|---|
+| Any TabX-owned drag interaction (`.is-dragging`/`.is-dropped` or equivalent) | **does not exist** | **does not exist** | **waived, nothing to audit — TabX implements no drag of its own.** Verified, not assumed: `grep -n "draggable\|dragstart\|dragover\|drop\b" src/*.ts` (excluding test files) returns zero hits; the rail and grid are click-to-activate views (`activateTab`/`activate` call `app.workspace.setActiveLeaf`), not reorderable lists. Tab reordering itself happens in Obsidian's native horizontal tab bar, entirely outside TabX's DOM — `docs/2026-07-25-dynamics-depth-design.md`'s own note ("il drag nativo usa transform inline → verificare che non ci sia conflitto") asks only to confirm no conflict, not to add drag polish TabX doesn't own. Confirmed no conflict: `grep -n "left:\|top:\|\.style\." src/*.ts` shows the only inline `style.setProperty` calls are `--tabx-card-width`/`--tabx-min-tab-width` custom-property widths, never `left`/`top` positioning that could fight native drag. |
+
+## Panel & tab transitions
+
+| Motion | Before | After | Verdict |
+|---|---|---|---|
+| Auto-hide tab bar `max-height` collapse/expand (`body.tabx-autohide-tabs … .workspace-tab-header-container`) | `transition: max-height var(--cosmos-t-base, 180ms) var(--tabx-ease) var(--tabx-autohide-delay)` — **wrong tier**: the adjacent comment already named this mv-kit's "structural panel movement" category (citing `--cosmos-t-panel`'s own doc example, sidebar open/close) but the code used the *hover/wash* tier (`--cosmos-t-base` + `--tabx-ease`/`--mv-wash`), not the *panel* tier the kit's §6 table actually names for this category (`--cosmos-t-panel` + `--cosmos-native`) | `transition: max-height var(--cosmos-t-panel, 300ms) var(--cosmos-native, cubic-bezier(0.32, 0.72, 0, 1)) var(--tabx-autohide-delay)` | **fixed** — both the duration (180ms → 300ms) and the easing (`--mv-wash`'s colour curve → `--cosmos-native`'s zero-overshoot structural curve) moved to the pair the kit's own §6 table specifies for "Panel/sidebar open-close". The wave-4 audit had already correctly judged *which property* animates (`max-height`, the sanctioned structural exception — unchanged, still correct, not revisited this wave) but had the *tier* wrong; this wave's fix is duration/easing only, no property or architecture change. |
+| Auto-hide tab bar content fade (`opacity` on the header's children, same selector's `> *`) | `transition: opacity var(--cosmos-t-fast, 120ms) var(--tabx-ease)` | unchanged | **pass, correctly fast-tier** — this is the text-fade riding along with the structural collapse, a wash-style opacity fade, not the structural move itself (the kit's own §3 phone-recipe table treats lightweight fades as `--cosmos-t-fast`-tier, e.g. `cosmos-fade-in`). Re-confirmed this wave, not changed. |
+| Auto-hide tab bar reveal-on-hover (`:hover` override, same block, `transition-delay: 0ms` only) | inherits the parent selector's `transition:` shorthand, overrides only the delay | automatically inherits the new `--cosmos-t-panel`/`--cosmos-native` pair from the fix above — no separate edit needed | **pass (inherited fix, verified not assumed)** — confirmed by reading the cascade: the `:hover` rule never redeclares its own `transition` property, so CSS's normal inheritance-through-specificity gives it the corrected parent value for free. |
+| Tab-content swap (crossfade vs. slide) | TabX renders no tab-content swap of its own | same | **waived, not applicable — TabX owns no such surface.** The rail/grid *select* a leaf (`setActiveLeaf`); the actual pane content swap that follows is native Obsidian editor-pane behaviour, entirely outside any CSS TabX ships. `grep -n "@keyframes\|slide" styles.css` (excluding the unrelated shimmer keyframe already waived in wave 4): zero hits for anything resembling a slide-in. Nothing to crossfade-ify because nothing plugin-owned swaps. |
+| `.tabx-tab.is-active` / `.tabx-card.is-active` state change on tab switch | colour/shadow transition already token-sourced (`--cosmos-t-fast`/`--cosmos-t-base` + `--tabx-ease`), unchanged this wave | same | **pass, correctly hover/wash-tier, not panel-tier** — this is a colour-state change on an existing, already-rendered row/card (not a structural open/close or a content swap), so the kit's panel-duration MUST doesn't apply here; the faster hover tier is the correct one, matching the kit's own tier split between "hover wash" (fast) and "structural panel movement" (panel). Re-confirmed, not changed. |
+
+## Style contract — new §6 assertions
+
+Two new assertions added to `src/style-contract.test.ts`, both mechanically
+derived from concrete findings above (zero speculative assertions, per this
+wave's brief):
+
+1. **`§6: no bare :hover rule outside @media (hover: hover) on a tabx-owned
+   selector`** — a brace-depth scanner walks `styles.css` (comments
+   stripped) tracking whether each `.tabx-*:hover` rule opens inside an
+   `@media (hover: hover)` block; any that opens at depth 0 (or inside any
+   other enclosing block that isn't the hover-gate) is a violation. Explicitly
+   excludes the native `.workspace-tab-header-container:hover` selector by
+   construction (the regex only matches `.tabx-*` selectors) — the waived
+   selector above is a different, judged exception, not something the test
+   silently permits by accident.
+2. **`§6: the auto-hide tab bar (structural panel movement) uses
+   --cosmos-t-panel`** — extracts the `max-height` transition value from the
+   `workspace-tab-header-container` rule and asserts it names
+   `var(--cosmos-t-panel, 300ms)` literally, catching any future regression
+   back to the hover/wash tier.
+
+Both assertions are additive; all 5 pre-existing assertions in the file
+(raw-value scan, `!important` ceiling, no `--cosmos-*`/`--mv-*` definitions,
+the two comment-integrity guards) pass unmodified.
+
+**Red-before-green, re-verified this wave**: injected both violations back
+into a working copy — un-gated `.tabx-rail-action:hover` (removed its
+`@media` wrapper) and reverted the auto-hide `max-height` transition to
+`var(--cosmos-t-base, 180ms) var(--tabx-ease)`. Both new assertions failed as
+expected (`not ok 6` flagged the ungated selector by line, `not ok 7` flagged
+the wrong duration token); all 5 pre-existing assertions stayed green
+throughout. Restored from a pre-probe backup and confirmed byte-identical via
+`shasum` (`2e629640d38680d4c0745213db8d13ee7f6c8a3e`, matching before and
+after); re-ran: **41/41 green** (39 pre-wave + 2 new).
+
+## Not touched (explicit non-goals, confirmed out of scope)
+
+- No layout or DOM changes anywhere — every fix in this wave is a duration
+  token substitution, a media-query gate addition around three already-shipped
+  hover rules, or one new `transform` transition on an already-existing
+  selector. `src/reconcile.test.ts` and `src/masonry-layout.test.ts` passing
+  unmodified in the final run (41/41 total) is the mechanical proof the
+  keyed-reconciliation grid and masonry layout backstop were untouched.
+- No new plugin-owned drag surface was built to give §6's Drag polish rule
+  something to satisfy — TabX's click-to-activate model has no drag of its
+  own, and building one would be a new component, forbidden by this wave's
+  non-goals.
+- No tap-to-reveal affordance was added for the auto-hide bar on mobile —
+  the reachability gap surfaced under Hover richness above is flagged for a
+  future cantiere, not fixed here (new interaction design, not a coherence
+  token fix).
+- `.tabx-tab.is-active` / `.tabx-card.is-active` state-change duration tier
+  — audited and confirmed already correct (hover/wash tier, not
+  panel tier), no change made.
+- Elevation shadows on `.tabx-tab.is-active` / `.tabx-card:hover` /
+  `.tabx-card.is-active` — re-confirmed as the wave-4 waiver (not
+  floating/persistent surfaces in §6's sense), not touched.
+
+## Verification
+
+Run on the post-fix tree, exit codes and counts quoted verbatim:
+
+- `pnpm typecheck` (`tsc --noEmit`) — **exit 0**, 0 errors.
+- `pnpm lint` (`eslint src`) — **exit 0**, 0 problems.
+- `pnpm test` (`node --experimental-strip-types --test src/*.test.ts`) —
+  **tests 41 / pass 41 / fail 0** (39 pre-wave + 2 new §6 assertions;
+  `reconcile.test.ts` and `masonry-layout.test.ts` both green and
+  unmodified).
+- Red-before-green re-verified against both new assertions (see the Style
+  contract section above): both failed as expected on the injected
+  violations, both pass on the fixed file; restore confirmed byte-identical
+  via `shasum`.
+- Desktop screenshot / live vault reload verification: **pending** — not
+  performed this wave (no live vault-reload check run in this session,
+  consistent with wave 4's own scope).
+- Phone verification: **pending Mario's on-device sign-off**, same
+  constraint as wave 4 — `EmulateMobile` was not used (kills Node plugins).
+  The phone-side claims in this wave (all four gated hover rules stop
+  triggering on touch; the auto-hide reachability gap is a pre-existing,
+  now-documented limitation, not a regression) are verified by reading the
+  resulting CSS/JS against the kit's phone column and against
+  `grep`-confirmed absence of mobile gating, not by rendering on-device.
