@@ -203,3 +203,82 @@ test('stripping comments leaves no orphaned prose', () => {
 
   assert.deepEqual(orphans, []);
 });
+
+// mv-kit §6 (Elevation & motion depth) — wave 2026-07 dinamica, per
+// docs/2026-07-mv-kit-audit.md's "§6 — wave 2026-07 dinamica" section.
+//
+// Golden rule for hover on touch: "a touch tap must never leave a stuck
+// hover state — plugins must not fight it with custom :hover outside
+// @media (hover: hover) on phone-reachable elements." A bare `.foo:hover {}`
+// rule at the stylesheet's top level fires on tap on touch devices (the
+// visual state gets "stuck" until the next unrelated tap elsewhere) because
+// there is no pointer to leave. Every `.tabx-*:hover` rule that isn't itself
+// the `@media (hover: hover)` block's own selector, and isn't nested inside
+// one, is that violation.
+//
+// Excludes the auto-hide tab bar's own `:hover` reveal trigger
+// (`.workspace-tab-header-container:hover`): that selector is the
+// desktop-only reveal affordance for an opt-in feature with no mobile
+// activation path at all (confirmed: no `Platform`/`isMobile` gating
+// anywhere in src/), so it can never fire on touch and therefore cannot
+// leave a stuck *visual* state — the touch-reachability gap that selector
+// represents is a separate, pre-existing concern (waived in the audit doc,
+// not a §6 elevation/motion-depth defect) rather than the stuck-hover defect
+// this assertion targets.
+test('§6: no bare :hover rule outside @media (hover: hover) on a tabx-owned selector', () => {
+  const code = stripComments(css);
+  const lines = code.split('\n');
+
+  let depth = 0;
+  const hoverGateDepths: number[] = [];
+  const violations: string[] = [];
+
+  lines.forEach((rawLine, idx) => {
+    const line = rawLine.trim();
+    const opensHoverGate = /@media\s*\(hover:\s*hover\)/.test(line) && line.includes('{');
+
+    if (opensHoverGate) hoverGateDepths.push(depth);
+
+    const opensBareTabxHoverRule =
+      !opensHoverGate &&
+      line.includes('{') &&
+      /^\.tabx-[\w-]+(?:[.:][\w-]+)*:hover\b/.test(line);
+
+    if (opensBareTabxHoverRule && hoverGateDepths.length === 0) {
+      violations.push(`line ${idx + 1}: "${line}"`);
+    }
+
+    for (const ch of rawLine) {
+      if (ch === '{') depth += 1;
+      if (ch === '}') {
+        depth -= 1;
+        const gateDepth = hoverGateDepths[hoverGateDepths.length - 1];
+        if (gateDepth !== undefined && depth <= gateDepth) {
+          hoverGateDepths.pop();
+        }
+      }
+    }
+  });
+
+  assert.deepEqual(violations, []);
+});
+
+// mv-kit §6 — Panel & tab transitions: "a panel that opens/closes (not just
+// shows/hides) animates transform/opacity over --cosmos-t-panel, not the
+// faster hover duration." The auto-hide tab bar's max-height collapse/expand
+// is exactly this category — its own adjacent comment already names it
+// ("mv-kit §3's own 'structural panel movement' category
+// (--cosmos-t-panel's own doc example is sidebar open/close)") — so its
+// transition-duration token must actually be --cosmos-t-panel, not
+// --cosmos-t-fast/--cosmos-t-base (the row/hover-wash tier).
+test('§6: the auto-hide tab bar (structural panel movement) uses --cosmos-t-panel', () => {
+  const code = stripComments(css);
+  const ruleMatch = code.match(
+    /workspace-tab-header-container\s*\{[^}]*max-height:\s*var\(--tabx-autohide-gap[^}]*?transition:\s*max-height\s+([^;]+);/,
+  );
+
+  assert.ok(ruleMatch, 'expected to find the auto-hide bar max-height transition rule');
+  const transitionValue = ruleMatch?.[1];
+  assert.ok(transitionValue, 'expected the transition rule to capture its value');
+  assert.match(transitionValue, /var\(--cosmos-t-panel,\s*300ms\)/);
+});
