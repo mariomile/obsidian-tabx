@@ -68,9 +68,15 @@
   color: var(--text-muted);
 }
 
-.tabx-rail-action:hover {
-  color: var(--text-normal);
-  background: var(--background-modifier-hover);
+/* mv-kit §6: custom :hover on a phone-reachable element must live inside
+   @media (hover: hover) — a bare rule fires on tap and leaves the wash
+   "stuck" until an unrelated tap elsewhere, since touch has no pointer to
+   leave. */
+@media (hover: hover) {
+  .tabx-rail-action:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
 }
 
 .tabx-rail-list {
@@ -165,9 +171,14 @@
   opacity: 1;
 }
 
-.tabx-tab-close:hover {
-  color: var(--text-normal);
-  background: var(--background-modifier-hover);
+/* mv-kit §6: gated, see the .tabx-rail-action:hover comment above — this
+   button is forced visible (opacity: 1) on @media (pointer: coarse), so a
+   stuck hover wash here is directly reachable on phone. */
+@media (hover: hover) {
+  .tabx-tab-close:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
 }
 
 /* ---------------------------------------------------------------- Grid --- */
@@ -238,9 +249,12 @@
   color: var(--text-muted);
 }
 
-.tabx-sort-button:hover {
-  color: var(--text-normal);
-  background: var(--background-modifier-hover);
+/* mv-kit §6: gated, see the .tabx-rail-action:hover comment above. */
+@media (hover: hover) {
+  .tabx-sort-button:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
 }
 
 .tabx-grid-empty {
@@ -354,9 +368,15 @@
     var(--background-secondary)
   );
   cursor: pointer;
+  /* mv-kit §6 fix: hover richness is colour AND a subtle physical lift, never
+     colour alone — the border/shadow wash already existed, the transform was
+     missing. The wash eases with --mv-wash (via --tabx-ease); the lift eases
+     with --mv-lift, its own token, per the kit's own recipe ("the two
+     easings are not interchangeable"). */
   transition:
     border-color var(--cosmos-t-fast, 140ms) var(--tabx-ease),
-    box-shadow var(--cosmos-t-base, 180ms) var(--tabx-ease);
+    box-shadow var(--cosmos-t-base, 180ms) var(--tabx-ease),
+    transform var(--cosmos-t-fast, 140ms) var(--mv-lift, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
 @media (hover: hover) {
@@ -364,6 +384,12 @@
     border-color: var(--background-modifier-border-hover);
     box-shadow: 0 5px 16px
       color-mix(in srgb, var(--background-modifier-box-shadow) 18%, transparent);
+    /* mv-kit §6: lift ≤2px, physical-object-settling easing (--mv-lift), not
+       the colour-wash curve. The phone equivalent is the existing
+       :active { transform: scale(--cosmos-press-scale) } press-scale in the
+       @media (pointer: coarse) block below — touch has no hover, so its
+       "physical response" affordance is the press, not a lift. */
+    transform: translateY(-1px);
   }
 }
 
@@ -400,9 +426,14 @@
   opacity: 1;
 }
 
-.tabx-card-close:hover {
-  color: var(--text-normal);
-  background: var(--background-modifier-hover);
+/* mv-kit §6: gated, see the .tabx-rail-action:hover comment above — this
+   button is forced visible (opacity: 1) on @media (pointer: coarse), so a
+   stuck hover wash here is directly reachable on phone. */
+@media (hover: hover) {
+  .tabx-card-close:hover {
+    color: var(--text-normal);
+    background: var(--background-modifier-hover);
+  }
 }
 
 .tabx-card-body {
@@ -655,11 +686,16 @@ body.tabx-autohide-tabs
   /* The collapse (revert to this state) waits out the tolerance delay; if the
      cursor comes back within it, the bar never closes.
      max-height is a layout property, not transform/opacity — an accepted
-     exception, not an oversight: this is mv-kit §3's own "structural panel
-     movement" category (--cosmos-t-panel's own doc example is sidebar
+     exception, not an oversight: this is mv-kit §3's/§6's own "structural
+     panel movement" category (--cosmos-t-panel's own doc example is sidebar
      open/close), and the bar is genuinely in-flow (it reclaims/yields real
-     editor space), so there is no transform-only way to animate it. */
-  transition: max-height var(--cosmos-t-base, 180ms) var(--tabx-ease) var(--tabx-autohide-delay);
+     editor space), so there is no transform-only way to animate it.
+     mv-kit §6 fix: was --cosmos-t-base (the hover/wash tier) — the panel
+     table names --cosmos-t-panel + --cosmos-native explicitly for this
+     category, so both the duration AND the easing move to the structural
+     pair (--tabx-ease/--mv-wash is a colour-wash curve, not the
+     zero-overshoot easing panels settle with). */
+  transition: max-height var(--cosmos-t-panel, 300ms) var(--cosmos-native, cubic-bezier(0.32, 0.72, 0, 1)) var(--tabx-autohide-delay);
 }
 
 /* Fade the tab contents out while collapsed so no clipped text bleeds. */
