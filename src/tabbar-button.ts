@@ -34,10 +34,17 @@ export class TabBarButtonManager {
         attr: {
           'aria-label': 'Open tab grid',
           'data-tooltip-position': 'bottom',
+          role: 'button',
+          tabindex: '0',
         },
       });
       setIcon(button, 'layout-grid');
       button.addEventListener('click', () => this.onClick());
+      button.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        button.click();
+      });
 
       const newTab = container.querySelector('.workspace-tab-header-new-tab');
       if (newTab) newTab.insertAdjacentElement('afterend', wrap);
