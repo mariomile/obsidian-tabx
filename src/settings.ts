@@ -49,21 +49,6 @@ export class TabxSettingTab extends PluginSettingTab {
       );
 
     new Setting(containerEl)
-      .setName('Minimum tab width')
-      .setDesc('Pixels each tab keeps before the bar scrolls.')
-      .addSlider((slider) =>
-        slider
-          .setLimits(60, 400, 10)
-          .setValue(this.plugin.settings.minTabWidth)
-          .setDynamicTooltip()
-          .onChange(async (value) => {
-            this.plugin.settings.minTabWidth = value;
-            await this.plugin.saveSettings();
-            this.plugin.applyTabBarStyle();
-          }),
-      );
-
-    new Setting(containerEl)
       .setName('Tab grid button in tab bar')
       .setDesc('Show a button in the main tab bar that opens the tab grid.')
       .addToggle((toggle) =>

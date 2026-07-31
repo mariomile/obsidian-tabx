@@ -92,7 +92,6 @@ export default class TabxPlugin extends Plugin {
     this.tabBarButton.unmount();
     document.body.removeClass('tabx-scroll-tabs');
     document.body.removeClass('tabx-autohide-tabs');
-    document.body.style.removeProperty('--tabx-min-tab-width');
     this.previewService.invalidate();
   }
 
@@ -102,10 +101,6 @@ export default class TabxPlugin extends Plugin {
 
   applyTabBarStyle(): void {
     document.body.toggleClass('tabx-scroll-tabs', this.settings.scrollTabBar);
-    document.body.style.setProperty(
-      '--tabx-min-tab-width',
-      `${this.settings.minTabWidth}px`,
-    );
   }
 
   applyAutoHide(): void {

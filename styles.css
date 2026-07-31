@@ -746,7 +746,6 @@ body.tabx-scroll-tabs
 
 body.tabx-scroll-tabs .mod-root .workspace-tab-header {
   flex: 0 0 auto;
-  min-width: var(--tabx-min-tab-width, 120px);
 }
 
 /* ------------------------------------------------------------- Motion ---- */

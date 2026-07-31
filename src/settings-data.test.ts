@@ -17,12 +17,10 @@ test('parseSettings keeps valid overrides', () => {
 test('parseSettings clamps out-of-range numbers', () => {
   assert.equal(parseSettings({ previewCharacters: 5 }).previewCharacters, 40);
   assert.equal(parseSettings({ previewCharacters: 9999 }).previewCharacters, 2000);
-  assert.equal(parseSettings({ minTabWidth: 10 }).minTabWidth, 60);
-  assert.equal(parseSettings({ minTabWidth: 9999 }).minTabWidth, 400);
 });
 
 test('parseSettings ignores wrong types', () => {
-  const parsed = parseSettings({ autoHide: 'yes', minTabWidth: 'wide' });
+  const parsed = parseSettings({ autoHide: 'yes', previewCharacters: 'wide' });
   assert.equal(parsed.autoHide, DEFAULT_SETTINGS.autoHide);
-  assert.equal(parsed.minTabWidth, DEFAULT_SETTINGS.minTabWidth);
+  assert.equal(parsed.previewCharacters, DEFAULT_SETTINGS.previewCharacters);
 });

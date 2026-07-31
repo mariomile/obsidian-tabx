@@ -1,6 +1,6 @@
 {
   "name": "tabx",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "See your open tabs as a vertical rail and a Masonry-style grid.",
   "main": "main.js",
   "type": "module",
