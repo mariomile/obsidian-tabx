@@ -2,10 +2,15 @@ import type { App } from 'obsidian';
 import { TFile } from 'obsidian';
 import type { TabPreview } from './types.ts';
 import { buildExcerpt } from './excerpt.ts';
+import { supportsRichPreview, type MasonryRenderApi } from './masonry-api.ts';
+
+export { supportsRichPreview, type MasonryRenderApi };
 
 export interface PreviewProvider {
   getPreview(filePath: string, maxChars: number): Promise<TabPreview>;
   invalidate(path?: string): void;
+  /** null quando il Masonry installato non offre la miniatura renderizzata. */
+  richPreviewApi(): MasonryRenderApi | null;
 }
 
 interface MasonryPreviewApi {
@@ -131,6 +136,15 @@ export class TabPreviewService implements PreviewProvider {
       if (!oldest) return;
       this.cache.delete(oldest);
     }
+  }
+
+  /** L'API di render, se il Masonry installato la espone. */
+  richPreviewApi(): MasonryRenderApi | null {
+    const plugins = (this.app as App & {
+      plugins?: { plugins?: Record<string, { api?: unknown }> };
+    }).plugins?.plugins;
+    const api = plugins?.masonry?.api;
+    return supportsRichPreview(api) && api.isRichPreviewAvailable() ? api : null;
   }
 
   private masonryPreviewApi(): MasonryPreviewApi | null {

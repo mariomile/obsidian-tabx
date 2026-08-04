@@ -507,6 +507,34 @@ export class GridView extends ItemView {
     const path = host.dataset.file;
     const token = host.dataset.token;
     if (!path) return;
+
+    // Miniatura renderizzata se il Masonry installato la offre: la card mostra
+    // il documento vero invece di un excerpt spogliato. Su 'non renderizzato'
+    // si CADE sul percorso testuale — una card che degrada a excerpt è meglio
+    // di una che degrada a errore. TabX non vendora il modulo: la sua storia
+    // sulle anteprime è sempre stata "delega a Masonry", e così resta.
+    const rich = this.previews.richPreviewApi();
+    if (rich) {
+      host.addClass('mv-mini');
+      host.setAttribute('aria-hidden', 'true');
+      try {
+        const outcome = await rich.renderFilePreview({
+          filePath: path,
+          hostEl: host,
+          token: token ?? '',
+        });
+        if (!host.isConnected || host.dataset.token !== token) return;
+        if (outcome.rendered) {
+          host.toggleClass('mv-mini--clipped', outcome.clipped);
+          return;
+        }
+      } catch (error) {
+        console.warn('TabX: miniatura Masonry fallita; uso il testo', error);
+      }
+      host.removeClass('mv-mini');
+      host.removeAttribute('aria-hidden');
+    }
+
     try {
       const preview = await this.previews.getPreview(
         path,

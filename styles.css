@@ -958,3 +958,60 @@ body.tabx-scroll-tabs .mod-root .workspace-tab-header {
   }
 }
 /* <<< fine blocco vendored <<< */
+
+/* ── Miniatura renderizzata (via API Masonry) ───────────────────────────────
+   Il markup lo scrive Masonry dentro questo host; qui vive solo la geometria.
+   Stesse regole della griglia All Docs: il box interno impagina alla larghezza
+   del DOCUMENTO e viene scalato, così la miniatura riproduce la forma reale
+   della nota invece di rimandarla a capo. Decorativa: pointer-events none. */
+.tabx-preview-host.mv-mini {
+  --mini-scale: 0.5;
+  --mini-fade: 40px;
+  --mini-min-h: 88px;
+  --mini-max-h: 300px;
+  position: relative;
+  overflow: hidden;
+  contain: layout paint style;
+  pointer-events: none;
+}
+
+.tabx-preview-host .mv-mini__inner {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(100% / var(--mini-scale, 0.5));
+  transform: scale(var(--mini-scale, 0.5));
+  transform-origin: top left;
+  padding: 12px 16px;
+  color: var(--text-normal);
+}
+
+.tabx-preview-host .mv-mini__inner > :first-child {
+  margin-top: 0;
+}
+
+/* Un'immagine non deve mangiarsi l'anteprima: resta un elemento del contenuto. */
+.tabx-preview-host .mv-mini__inner :is(img, video, canvas, svg) {
+  max-width: 100%;
+  max-height: 7em;
+  height: auto;
+  object-fit: cover;
+}
+
+.tabx-preview-host .mv-mini__inner :is(pre, table, .markdown-embed) {
+  overflow: hidden;
+}
+
+/* Taglio morbido, non ellissi. Entrambe le forme: Obsidian mobile è WebKit. */
+.tabx-preview-host.mv-mini--clipped {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    black calc(100% - var(--mini-fade, 40px)),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    black calc(100% - var(--mini-fade, 40px)),
+    transparent 100%
+  );
+}
