@@ -188,11 +188,8 @@ export class GridView extends ItemView {
 
     const controls = header.createDiv({ cls: 'tabx-grid-controls' });
 
-    // L'ordinamento vive in una capsula sua, accanto (non dentro) a quella
-    // delle densità: sono due decisioni diverse, non una scelta uno-di-N.
-    const sortCluster = controls.createDiv({ cls: 'mv-cluster tabx-sort-cluster' });
-    this.sortButton = sortCluster.createEl('button', {
-      cls: 'mv-cluster-btn tabx-sort-button',
+    this.sortButton = controls.createEl('button', {
+      cls: 'clickable-icon tabx-sort-button',
       attr: { type: 'button', 'aria-label': 'Sort tabs' },
     });
     setIcon(this.sortButton, 'arrow-up-down');
