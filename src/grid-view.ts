@@ -199,12 +199,12 @@ export class GridView extends ItemView {
     });
 
     const density = controls.createDiv({
-      cls: 'tabx-density',
+      cls: 'mv-seg tabx-density',
       attr: { role: 'group', 'aria-label': 'Card density' },
     });
     for (const mode of PRESENTATION_ORDER) {
       const button = density.createEl('button', {
-        cls: 'clickable-icon tabx-density-button',
+        cls: 'mv-seg-item tabx-density-button',
         attr: {
           type: 'button',
           title: DENSITY_LABELS[mode],
