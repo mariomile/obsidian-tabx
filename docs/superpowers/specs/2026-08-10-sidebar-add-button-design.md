@@ -76,10 +76,18 @@ partially-configured plugin never yields a dead menu item.
 
 ## Structure
 
+- `src/tab-header-button.ts` — the injection mechanism, now shared with the
+  main tab bar's grid button: idempotent mount guarded by a marker class,
+  remount on `layout-change`, unmount on unload, keyboard activation. The
+  strip-specific pieces (container selector, insertion anchor, wrapper class,
+  label, icon, activation) are its spec. Extracted once the second injector
+  proved the pattern — before that it would have been a guess at which parts
+  vary.
 - `src/sidebar-add-menu.ts` — pure. Takes plain lists (registered types,
   file-backed types, types open in a sidebar, command ids) and returns the two
   tiers. The whole policy is testable without a workspace.
-- `src/sidebar-add-button.ts` — DOM injection, menu construction, activation.
+- `src/sidebar-add-button.ts` — the sidebar spec plus the menu construction and
+  activation.
 - `src/obsidian-internals.ts` — gains `registeredViewTypes`,
   `fileBackedViewTypes`, `commandIds`, `executeCommand`, keeping every unsafe
   cast in the one file that owns them. Which split a leaf belongs to is asked

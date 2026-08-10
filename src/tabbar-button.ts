@@ -1,60 +1,18 @@
-import { setIcon, type App } from 'obsidian';
-
-const MARK = 'tabx-tabbar-grid';
+import { TabHeaderButton } from './tab-header-button.ts';
 
 /**
- * Injects a "Open tab grid" button into the native main-area tab bar, next to
- * the built-in "+" new-tab button. Obsidian rebuilds that container on layout
- * changes, so `mount()` is idempotent and meant to be re-run on layout-change.
- * Main window only (popout windows are not handled in v1).
+ * "Open tab grid" in the native main-area tab bar, next to the built-in "+".
+ * `workspace-tab-header-tab-list` is the native wrapper class there, which is
+ * what makes the button sit and style like the controls beside it.
  */
-export class TabBarButtonManager {
-  constructor(
-    private readonly app: App,
-    private readonly onClick: () => void,
-  ) {}
-
-  refresh(enabled: boolean): void {
-    if (enabled) this.mount();
-    else this.unmount();
-  }
-
-  mount(): void {
-    const containers = document.querySelectorAll<HTMLElement>(
-      '.mod-root .workspace-tab-header-container',
-    );
-    for (const container of Array.from(containers)) {
-      if (container.querySelector(`.${MARK}`)) continue;
-
-      const wrap = createDiv({
-        cls: `workspace-tab-header-tab-list ${MARK}`,
-      });
-      const button = wrap.createDiv({
-        cls: 'clickable-icon',
-        attr: {
-          'aria-label': 'Open tab grid',
-          'data-tooltip-position': 'bottom',
-          role: 'button',
-          tabindex: '0',
-        },
-      });
-      setIcon(button, 'layout-grid');
-      button.addEventListener('click', () => this.onClick());
-      button.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') return;
-        event.preventDefault();
-        button.click();
-      });
-
-      const newTab = container.querySelector('.workspace-tab-header-new-tab');
-      if (newTab) newTab.insertAdjacentElement('afterend', wrap);
-      else container.appendChild(wrap);
-    }
-  }
-
-  unmount(): void {
-    for (const el of Array.from(document.querySelectorAll(`.${MARK}`))) {
-      el.remove();
-    }
-  }
+export function createTabGridButton(onClick: () => void): TabHeaderButton {
+  return new TabHeaderButton({
+    mark: 'tabx-tabbar-grid',
+    containerSelector: '.mod-root .workspace-tab-header-container',
+    anchorSelector: '.workspace-tab-header-new-tab',
+    wrapperClass: 'workspace-tab-header-tab-list',
+    ariaLabel: 'Open tab grid',
+    icon: 'layout-grid',
+    onActivate: () => onClick(),
+  });
 }

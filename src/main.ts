@@ -3,8 +3,9 @@ import { Plugin, addIcon } from 'obsidian';
 import { GridView, TABX_GRID_VIEW_TYPE } from './grid-view.ts';
 import { RailView, TABX_RAIL_VIEW_TYPE } from './rail-view.ts';
 import { TabPreviewService } from './preview.ts';
-import { TabBarButtonManager } from './tabbar-button.ts';
-import { SidebarAddButtonManager } from './sidebar-add-button.ts';
+import { createTabGridButton } from './tabbar-button.ts';
+import { createSidebarAddButton } from './sidebar-add-button.ts';
+import type { TabHeaderButton } from './tab-header-button.ts';
 import { DEFAULT_SETTINGS, parseSettings, TabxSettingTab } from './settings.ts';
 import type { TabxSettings } from './types.ts';
 
@@ -22,16 +23,14 @@ addIcon(
 export default class TabxPlugin extends Plugin {
   settings: TabxSettings = { ...DEFAULT_SETTINGS };
   previewService!: TabPreviewService;
-  private tabBarButton!: TabBarButtonManager;
-  private sidebarAddButton!: SidebarAddButtonManager;
+  private tabBarButton!: TabHeaderButton;
+  private sidebarAddButton!: TabHeaderButton;
 
   async onload(): Promise<void> {
     this.settings = parseSettings(await this.loadData());
     this.previewService = new TabPreviewService(this.app);
-    this.tabBarButton = new TabBarButtonManager(this.app, () =>
-      void this.openGrid(),
-    );
-    this.sidebarAddButton = new SidebarAddButtonManager(this.app);
+    this.tabBarButton = createTabGridButton(() => void this.openGrid());
+    this.sidebarAddButton = createSidebarAddButton(this.app);
 
     this.registerHoverLinkSource('tabx', {
       display: 'TabX',

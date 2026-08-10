@@ -41,6 +41,11 @@ test('featured entries drop out when their view or command is missing', () => {
     input({ registered: ['webviewer', 'terminal:terminal'], commands: [] }),
   );
   assert.deepEqual(noTerminalCommand.featured.map((e) => e.label), ['Browser']);
+  // And it must not reappear in the second tier: the exclusion set is built
+  // from the FEATURED constant, not from the surviving entries, precisely so a
+  // featured view with a missing command is dropped rather than demoted into a
+  // list where clicking it would open it the way that was already ruled out.
+  assert.deepEqual(noTerminalCommand.views, []);
 });
 
 test('featured views are offered even when already open — a second one is valid', () => {
