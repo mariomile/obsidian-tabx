@@ -61,6 +61,21 @@ export class TabxSettingTab extends PluginSettingTab {
           }),
       );
 
+    new Setting(containerEl)
+      .setName('Add-pane button in the sidebar')
+      .setDesc(
+        'Show a "+" at the end of the right sidebar\'s icon strip that opens a menu of panes to add — browser, terminal, and every other sidebar view.',
+      )
+      .addToggle((toggle) =>
+        toggle
+          .setValue(this.plugin.settings.sidebarAddButton)
+          .onChange(async (value) => {
+            this.plugin.settings.sidebarAddButton = value;
+            await this.plugin.saveSettings();
+            this.plugin.applySidebarAddButton();
+          }),
+      );
+
     new Setting(containerEl).setName('Grid').setHeading();
 
     new Setting(containerEl)

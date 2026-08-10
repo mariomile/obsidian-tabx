@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS: TabxSettings = {
   previewCharacters: 240,
   presentation: 'editorial',
   tabBarButton: true,
+  sidebarAddButton: true,
   sort: 'tab-order',
 };
 
@@ -47,6 +48,7 @@ export function parseSettings(raw: unknown): TabxSettings {
       DEFAULT_SETTINGS.presentation,
     ),
     tabBarButton: bool(data.tabBarButton, DEFAULT_SETTINGS.tabBarButton),
+    sidebarAddButton: bool(data.sidebarAddButton, DEFAULT_SETTINGS.sidebarAddButton),
     sort: resolveSort(data.sort, DEFAULT_SETTINGS.sort),
   };
 }

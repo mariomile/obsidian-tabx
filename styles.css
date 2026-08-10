@@ -1021,3 +1021,14 @@ body.tabx-scroll-tabs .mod-root .workspace-tab-header {
     transparent 100%
   );
 }
+
+/* ── Sidebar "add pane" button ───────────────────────────────────────────
+   A "+" at the end of the sidebar's tab-header strip. It gets its own wrapper
+   class rather than the native `workspace-tab-header-tab-list`, which
+   Obsidian sets to `display: none` outside the main split — the child keeps
+   `clickable-icon`, so colour, hover and press stay the theme's business. */
+.tabx-sidebar-add {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}

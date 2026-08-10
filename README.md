@@ -25,6 +25,11 @@ Sonar…).
   the button in the main tab bar, or the command.
 - **Auto-hide** — hide the horizontal note tab bar and reveal it on hover at
   the top of the pane, reclaiming vertical space. Off by default.
+- **Add-pane "+"** — a "+" at the end of the right sidebar's icon strip, where
+  a tab bar's "+" would be. It opens a menu with **Browser** and **Terminal**
+  on top, then every other view that can live in a sidebar and isn't already
+  open there. Views open in the right sidebar; the terminal opens wherever the
+  Terminal plugin puts it, since only that plugin can build its shell profile.
 - **Scrolling tab bar** — let the native top tab bar scroll horizontally
   instead of shrinking each tab to an unreadable sliver. On by default.
 
@@ -45,6 +50,7 @@ Sonar…).
 | Scrolling horizontal tab bar | on | Native tab bar scrolls instead of shrinking tabs. |
 | Minimum tab width | 120 px | Width each tab keeps before the bar scrolls. |
 | Tab grid button in tab bar | on | Inject an "open tab grid" button next to the native "+". |
+| Add-pane button in the sidebar | on | Show a "+" at the end of the right sidebar's icon strip that opens a menu of panes to add. |
 | Default card density | editorial | Initial grid layout (compact / editorial / visual). |
 | Default sort | tab order | Initial grid sort (tab order / recently modified / title). |
 | Show card previews | on | Load a short excerpt on each grid card. |

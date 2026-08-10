@@ -1,4 +1,4 @@
-import type { WorkspaceLeaf } from 'obsidian';
+import type { App, WorkspaceLeaf } from 'obsidian';
 
 /**
  * Typed accessors for Obsidian internals that are not part of the public
@@ -24,4 +24,39 @@ export function leafId(leaf: WorkspaceLeaf): string {
     mintedIds.set(leaf, minted);
   }
   return minted;
+}
+
+interface AppInternals {
+  viewRegistry?: {
+    /** Every registered view type → its factory. */
+    viewByType?: Record<string, unknown>;
+    /** File extension → the view type that opens it. */
+    typeByExtension?: Record<string, string>;
+  };
+  commands?: {
+    commands?: Record<string, unknown>;
+    executeCommandById?: (id: string) => boolean;
+  };
+}
+
+const internals = (app: App): AppInternals => app as unknown as AppInternals;
+
+/** Every view type Obsidian knows how to open. */
+export function registeredViewTypes(app: App): string[] {
+  return Object.keys(internals(app).viewRegistry?.viewByType ?? {});
+}
+
+/** View types bound to a file extension — i.e. the ones that only make sense
+ *  with a file behind them, which is what disqualifies them from a "add a
+ *  pane" menu. Derived, so a newly installed file type excludes itself. */
+export function fileBackedViewTypes(app: App): string[] {
+  return [...new Set(Object.values(internals(app).viewRegistry?.typeByExtension ?? {}))];
+}
+
+export function commandIds(app: App): string[] {
+  return Object.keys(internals(app).commands?.commands ?? {});
+}
+
+export function executeCommand(app: App, id: string): void {
+  internals(app).commands?.executeCommandById?.(id);
 }

@@ -4,6 +4,7 @@ import { GridView, TABX_GRID_VIEW_TYPE } from './grid-view.ts';
 import { RailView, TABX_RAIL_VIEW_TYPE } from './rail-view.ts';
 import { TabPreviewService } from './preview.ts';
 import { TabBarButtonManager } from './tabbar-button.ts';
+import { SidebarAddButtonManager } from './sidebar-add-button.ts';
 import { DEFAULT_SETTINGS, parseSettings, TabxSettingTab } from './settings.ts';
 import type { TabxSettings } from './types.ts';
 
@@ -22,6 +23,7 @@ export default class TabxPlugin extends Plugin {
   settings: TabxSettings = { ...DEFAULT_SETTINGS };
   previewService!: TabPreviewService;
   private tabBarButton!: TabBarButtonManager;
+  private sidebarAddButton!: SidebarAddButtonManager;
 
   async onload(): Promise<void> {
     this.settings = parseSettings(await this.loadData());
@@ -29,6 +31,7 @@ export default class TabxPlugin extends Plugin {
     this.tabBarButton = new TabBarButtonManager(this.app, () =>
       void this.openGrid(),
     );
+    this.sidebarAddButton = new SidebarAddButtonManager(this.app);
 
     this.registerHoverLinkSource('tabx', {
       display: 'TabX',
@@ -83,13 +86,20 @@ export default class TabxPlugin extends Plugin {
     this.applyTabBarStyle();
     this.applyAutoHide();
     this.registerEvent(
-      this.app.workspace.on('layout-change', () => this.applyTabBarButton()),
+      this.app.workspace.on('layout-change', () => {
+        this.applyTabBarButton();
+        this.applySidebarAddButton();
+      }),
     );
-    this.app.workspace.onLayoutReady(() => this.applyTabBarButton());
+    this.app.workspace.onLayoutReady(() => {
+      this.applyTabBarButton();
+      this.applySidebarAddButton();
+    });
   }
 
   onunload(): void {
     this.tabBarButton.unmount();
+    this.sidebarAddButton.unmount();
     document.body.removeClass('tabx-scroll-tabs');
     document.body.removeClass('tabx-autohide-tabs');
     this.previewService.invalidate();
@@ -109,6 +119,10 @@ export default class TabxPlugin extends Plugin {
 
   applyTabBarButton(): void {
     this.tabBarButton.refresh(this.settings.tabBarButton);
+  }
+
+  applySidebarAddButton(): void {
+    this.sidebarAddButton.refresh(this.settings.sidebarAddButton);
   }
 
   refreshGrids(): void {

@@ -10,6 +10,9 @@ export interface TabxSettings {
   previewCharacters: number;
   presentation: Presentation;
   tabBarButton: boolean;
+  /** "+" at the end of the right sidebar's tab-header strip, opening a menu
+   *  of panes to add (browser, terminal, any other sidebar view). */
+  sidebarAddButton: boolean;
   sort: GridSort;
 }
 
