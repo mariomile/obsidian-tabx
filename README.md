@@ -1,5 +1,19 @@
 # TabX
 
+> [!WARNING]
+> **TabX is deprecated and this repository is archived.** It has been merged into
+> [Masonry](https://github.com/mariomile/obsidian-masonry) 1.4.0 as its **Open tabs**
+> module: the tab rail, the tab grid (now a real Masonry gallery), auto-hide and the
+> scrolling tab bar all live there.
+>
+> To migrate: update Masonry to 1.4.0 or newer, disable and remove TabX, then reload
+> Masonry. It imports your TabX settings once on first load, and saved workspace
+> layouts keep working because the view types (`tabx-rail`, `tabx-grid`) are
+> unchanged. Commands move under Masonry (`masonry:open-tab-rail`,
+> `masonry:open-tab-grid`, `masonry:toggle-tab-bar-autohide`), so hotkeys need to be
+> set again. Details in the
+> [Masonry README](https://github.com/mariomile/obsidian-masonry#migrating-from-tabx).
+
 See your open tabs as a **vertical rail** in the sidebar and as a **Masonry-style
 grid** — with an optional hover-to-reveal sidebar and a horizontally-scrolling
 native tab bar.
